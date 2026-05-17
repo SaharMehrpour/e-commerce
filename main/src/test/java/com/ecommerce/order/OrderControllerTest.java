@@ -1,20 +1,19 @@
-package com.ecommerce.controller;
+package com.ecommerce.order;
 
-import com.ecommerce.model.Order;
-import com.ecommerce.service.OrderService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,15 +23,21 @@ public class OrderControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
-    private OrderService orderService;
+    @Autowired
+    private TestOrderService orderService;
+
+    @BeforeEach
+    void setUp() {
+        orderService.orders = new ArrayList<>();
+        orderService.order = Optional.empty();
+    }
 
     @Test
     void shouldCreateOrder() throws Exception {
         Order createdOrder = new Order("u1", "p1", 2);
         createdOrder.setStatus("CREATED");
 
-        when(orderService.createOrder(any(Order.class))).thenReturn(createdOrder);
+        orderService.orderToCreate = createdOrder;
 
         String orderJson = """
             {
@@ -62,7 +67,7 @@ public class OrderControllerTest {
         mockOrders.get(0).setStatus("CREATED");
         mockOrders.get(1).setStatus("CREATED");
 
-        when(orderService.getOrders()).thenReturn(mockOrders);
+        orderService.orders = mockOrders;
 
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isOk())
@@ -82,7 +87,7 @@ public class OrderControllerTest {
         Order order = new Order("u1", "p1", 2);
         order.setStatus("CREATED");
 
-        when(orderService.getOrder("1")).thenReturn(Optional.of(order));
+        orderService.order = Optional.of(order);
 
         mockMvc.perform(get("/orders/1"))
             .andExpect(status().isOk())
@@ -95,10 +100,44 @@ public class OrderControllerTest {
 
     @Test
     void shouldReturn404WhenNotFound() throws Exception {
-        
-        when(orderService.getOrder("999")).thenReturn(Optional.empty());
+        orderService.order = Optional.empty();
 
         mockMvc.perform(get("/orders/999"))
             .andExpect(status().isNotFound());
+    }
+
+    @TestConfiguration
+    static class TestConfig {
+
+        @Bean
+        TestOrderService orderService() {
+            return new TestOrderService();
+        }
+    }
+
+    static class TestOrderService extends OrderService {
+
+        private Order orderToCreate;
+        private List<Order> orders = new ArrayList<>();
+        private Optional<Order> order = Optional.empty();
+
+        TestOrderService() {
+            super(null, null);
+        }
+
+        @Override
+        public Order createOrder(Order order) {
+            return orderToCreate;
+        }
+
+        @Override
+        public List<Order> getOrders() {
+            return orders;
+        }
+
+        @Override
+        public Optional<Order> getOrder(String id) {
+            return order;
+        }
     }
 }

@@ -1,0 +1,3 @@
+- To start mongodb and kafka: `docker compose up -d`
+- To install the app: `./mvnw clean install`
+- To start the app: `./mvnw clean spring-boot:run`

@@ -3,6 +3,9 @@ package com.ecommerce.order;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.ecommerce.event.*;
+import com.ecommerce.kafka.OrderKafkaProducer;
+
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +36,12 @@ class OrderServiceTest {
         assertEquals("CREATED", createdOrder.getStatus());
         assertSame(createdOrder, repository.savedOrder);
 
-        OrderCreatedEvent event = kafkaProducer.sentEvent;
+        assertInstanceOf(
+                OrderCreatedEvent.class,
+                kafkaProducer.sentEvent
+        );
+        OrderCreatedEvent event = (OrderCreatedEvent) kafkaProducer.sentEvent;
+
         assertNotNull(event);
         assertEquals("order-1", event.getOrderId());
         assertEquals("u1", event.getUserId());
@@ -106,7 +114,7 @@ class OrderServiceTest {
 
     private static class FakeOrderKafkaProducer extends OrderKafkaProducer {
 
-        private OrderCreatedEvent sentEvent;
+        private Event sentEvent;
 
         private FakeOrderKafkaProducer() {
             super(null, "order-created");

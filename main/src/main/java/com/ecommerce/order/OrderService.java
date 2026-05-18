@@ -6,6 +6,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
+import com.ecommerce.event.*;
+import com.ecommerce.kafka.OrderKafkaProducer;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +33,7 @@ public class OrderService {
         Order savedOrder = repository.save(order);
 
         OrderCreatedEvent event = new OrderCreatedEvent(
+                "event-ID",
                 savedOrder.getId(),
                 savedOrder.getUserId(),
                 savedOrder.getProductId(),
@@ -51,5 +55,4 @@ public class OrderService {
     public Optional<Order> getOrder(String id) {
         return repository.findById(id);
     }
-
 }

@@ -1,6 +1,8 @@
-package com.ecommerce.order;
+package com.ecommerce.event;
 
-public class OrderCreatedEvent {
+import java.time.Instant;
+
+public class OrderCreatedEvent extends Event {
 
     private String orderId;
     private String userId;
@@ -11,7 +13,20 @@ public class OrderCreatedEvent {
     public OrderCreatedEvent() {
     }
 
-    public OrderCreatedEvent(String orderId, String userId, String productId, int quantity, String status) {
+    public OrderCreatedEvent(
+            String eventId,
+            String orderId,
+            String userId,
+            String productId,
+            int quantity,
+            String status
+    ) {
+        super(
+                eventId,
+                "ORDER_CREATED",
+                Instant.now()
+        );
+
         this.orderId = orderId;
         this.userId = userId;
         this.productId = productId;
@@ -37,25 +52,5 @@ public class OrderCreatedEvent {
 
     public String getStatus() {
         return status;
-    }
-
-    public void setOrderId(String orderId) {
-        this.orderId = orderId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public void setProductId(String productId) {
-        this.productId = productId;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
     }
 }

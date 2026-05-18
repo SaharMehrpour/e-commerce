@@ -1,0 +1,2 @@
+- To start: `./start.sh`
+- To stop: `./stop.sh`

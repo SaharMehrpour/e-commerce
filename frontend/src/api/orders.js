@@ -19,3 +19,14 @@ export async function getOrders() {
 
     return response.json();
 }
+
+export async function getOrderById(id) {
+
+    const response = await fetch(`${BASE_URL}/${id}`);
+
+    if (!response.ok) {
+        throw new Error("Order not found");
+    }
+
+    return response.json();
+}

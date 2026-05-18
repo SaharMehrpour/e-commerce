@@ -1,55 +1,53 @@
-import { useEffect, useState } from "react";
-import { createOrder, getOrders } from "./api/orders";
+import { useState } from "react";
+import "./App.css";
+import CreateOrderPage from "./pages/CreateOrderPage";
+import HomePage from "./pages/HomePage";
+import OrderDetailsPage from "./pages/OrderDetailsPage";
+import OrdersPage from "./pages/OrdersPage";
+
+const pages = {
+  home: {
+    label: "Home",
+    component: <HomePage />,
+  },
+  create: {
+    label: "Give Order",
+    component: <CreateOrderPage />,
+  },
+  orders: {
+    label: "All Orders",
+    component: <OrdersPage />,
+  },
+  details: {
+    label: "Order Info",
+    component: <OrderDetailsPage />,
+  },
+};
 
 function App() {
-
-  const [orders, setOrders] = useState([]);
-
-  async function loadOrders() {
-    const data = await getOrders();
-    setOrders(data);
-  }
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  async function handleCreateOrder() {
-
-    const newOrder = {
-      userId: "u1",
-      productId: "p1",
-      quantity: 2
-    };
-
-    await createOrder(newOrder);
-
-    loadOrders();
-  }
+  const [activePage, setActivePage] = useState("home");
 
   return (
-    <div style={{ padding: "20px" }}>
+    <main className="app-shell">
+      <header className="app-header">
+        <h1>E-Commerce App</h1>
 
-      <h1>E-Commerce Orders</h1>
+        <nav className="page-tabs" aria-label="Order pages">
+          {Object.entries(pages).map(([pageId, page]) => (
+            <button
+              className={activePage === pageId ? "active" : ""}
+              key={pageId}
+              type="button"
+              onClick={() => setActivePage(pageId)}
+            >
+              {page.label}
+            </button>
+          ))}
+        </nav>
+      </header>
 
-      <button onClick={handleCreateOrder}>
-        Create Order
-      </button>
-
-      <hr />
-
-      {orders.map((order, index) => (
-        <div key={index}>
-          <p>User: {order.userId}</p>
-          <p>Product: {order.productId}</p>
-          <p>Quantity: {order.quantity}</p>
-          <p>Status: {order.status}</p>
-
-          <hr />
-        </div>
-      ))}
-
-    </div>
+      {pages[activePage].component}
+    </main>
   );
 }
 

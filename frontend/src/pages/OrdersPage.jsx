@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { getOrders } from "../api/orders";
-
-let cachedOrders = [];
-let cachedHasLoaded = false;
+import { getOrdersPageCache, setOrdersPageCache } from "./ordersPageCache";
 
 function OrdersPage() {
-  const [orders, setOrders] = useState(cachedOrders);
+  const initialCache = getOrdersPageCache();
+  const [orders, setOrders] = useState(initialCache.orders);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(cachedHasLoaded);
+  const [hasLoaded, setHasLoaded] = useState(initialCache.hasLoaded);
 
   async function loadOrders() {
     setError("");
@@ -17,8 +16,7 @@ function OrdersPage() {
 
     try {
       const data = await getOrders();
-      cachedOrders = data;
-      cachedHasLoaded = true;
+      setOrdersPageCache(data);
       setOrders(data);
     } catch {
       setError("Could not load orders. Check that the backend is running.");

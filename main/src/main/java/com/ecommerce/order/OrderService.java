@@ -1,5 +1,9 @@
 package com.ecommerce.order;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,6 +20,10 @@ public class OrderService {
         this.kafkaProducer = kafkaProducer;
     }
 
+    @Caching(
+            put = @CachePut(value = "orders", key = "#result.id", unless = "#result.id == null"),
+            evict = @CacheEvict(value = "orders", key = "'all'")
+    )
     public Order createOrder(Order order) {
 
         order.setStatus("CREATED");
@@ -34,10 +42,12 @@ public class OrderService {
         return savedOrder;
     }
 
+    @Cacheable(value = "orders", key = "'all'")
     public List<Order> getOrders() {
         return repository.findAll();
     }
 
+    @Cacheable(value = "orders", key = "#id")
     public Optional<Order> getOrder(String id) {
         return repository.findById(id);
     }

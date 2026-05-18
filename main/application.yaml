@@ -12,3 +12,4 @@ app:
   kafka:
     topics:
       order-created: order-created
+      order-cancelled: order-cancelled

@@ -73,6 +73,37 @@ class OrderServiceTest {
         assertEquals("order-1", repository.requestedId);
     }
 
+    @Test
+    void cancelOrderShouldUpdateStatusAndPublishEvent() {
+
+        Order order = new Order("u1", "p1", 2);
+
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        Optional<Order> cancelledOrder = orderService.cancelOrder("order-1");
+
+        assertTrue(cancelledOrder.isPresent());
+
+        Order result = cancelledOrder.get();
+
+        assertEquals("CANCELLED", result.getStatus());
+
+        assertInstanceOf(
+                OrderCancelledEvent.class,
+                kafkaProducer.sentEvent
+        );
+
+        OrderCancelledEvent event =
+                (OrderCancelledEvent) kafkaProducer.sentEvent;
+
+        assertEquals("order-1", event.getOrderId());
+        assertEquals("u1", event.getUserId());
+        assertEquals("CANCELLED", event.getStatus());
+    }
+
     private static class FakeOrderRepository {
 
         private Order savedOrder;
@@ -117,11 +148,16 @@ class OrderServiceTest {
         private Event sentEvent;
 
         private FakeOrderKafkaProducer() {
-            super(null, "order-created");
+            super(null, "order-created", "order-cancelled");
         }
 
         @Override
         public void sendOrderCreatedEvent(OrderCreatedEvent event) {
+            sentEvent = event;
+        }
+
+        @Override
+        public void sendOrderCancelledEvent(OrderCancelledEvent event) {
             sentEvent = event;
         }
     }

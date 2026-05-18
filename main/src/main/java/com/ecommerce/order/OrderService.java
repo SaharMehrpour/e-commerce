@@ -55,4 +55,29 @@ public class OrderService {
     public Optional<Order> getOrder(String id) {
         return repository.findById(id);
     }
+
+    @CachePut(value = "orders", key = "#id", unless = "#result.isEmpty()")
+    public Optional<Order> cancelOrder(String id) {
+
+        Optional<Order> optionalOrder = repository.findById(id);
+
+        optionalOrder.ifPresent(order -> {
+
+            order.setStatus("CANCELLED");
+            Order updatedOrder = repository.save(order);
+
+            OrderCancelledEvent event =
+                    new OrderCancelledEvent(
+                            "event-ID",
+                            updatedOrder.getId(),
+                            updatedOrder.getUserId(),
+                            updatedOrder.getStatus()
+                    );
+
+            kafkaProducer.sendOrderCancelledEvent(event);
+        });
+
+        return optionalOrder;
+    }
+
 }

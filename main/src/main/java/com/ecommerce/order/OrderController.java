@@ -32,4 +32,11 @@ public class OrderController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<Order> cancelOrder(@PathVariable String id) {
+        return orderService.cancelOrder(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }

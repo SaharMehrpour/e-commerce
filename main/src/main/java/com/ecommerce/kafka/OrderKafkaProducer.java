@@ -5,6 +5,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.ecommerce.event.Event;
+import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderCreatedEvent;
 
 @Service
@@ -12,15 +13,22 @@ public class OrderKafkaProducer {
 
     private final KafkaTemplate<String, Event> kafkaTemplate;
     private final String orderCreatedTopic;
+    private final String orderCancelledTopic;
 
     public OrderKafkaProducer(
             KafkaTemplate<String, Event> kafkaTemplate,
-            @Value("${app.kafka.topics.order-created}") String orderCreatedTopic) {
+            @Value("${app.kafka.topics.order-created}") String orderCreatedTopic,
+            @Value("${app.kafka.topics.order-cancelled}") String orderCancelledTopic) {
         this.kafkaTemplate = kafkaTemplate;
         this.orderCreatedTopic = orderCreatedTopic;
+        this.orderCancelledTopic = orderCancelledTopic;
     }
 
     public void sendOrderCreatedEvent(OrderCreatedEvent event) {
         kafkaTemplate.send(orderCreatedTopic, event.getOrderId(), event);
+    }
+
+    public void sendOrderCancelledEvent(OrderCancelledEvent event) {
+        kafkaTemplate.send(orderCancelledTopic, event.getOrderId(), event);
     }
 }

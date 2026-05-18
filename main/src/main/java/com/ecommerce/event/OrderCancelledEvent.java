@@ -1,0 +1,42 @@
+package com.ecommerce.event;
+
+import java.time.Instant;
+
+public class OrderCancelledEvent extends Event {
+
+    private String orderId;
+    private String userId;
+    private String status;
+
+    public OrderCancelledEvent() {
+    }
+
+    public OrderCancelledEvent(
+            String eventId,
+            String orderId,
+            String userId,
+            String status
+    ) {
+        super(
+                eventId,
+                "ORDER_CANCELLED",
+                Instant.now()
+        );
+
+        this.orderId = orderId;
+        this.userId = userId;
+        this.status = status;
+    }
+
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+}

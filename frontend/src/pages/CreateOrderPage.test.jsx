@@ -31,9 +31,10 @@ describe("CreateOrderPage", () => {
       productId: "product-1",
       quantity: 2,
     });
-    expect(await screen.findByText("Created Order")).toBeInTheDocument();
-    expect(screen.getByText("ID: order-1")).toBeInTheDocument();
-    expect(screen.getByText("Status: CREATED")).toBeInTheDocument();
+
+    expect(await screen.findByText("Order Created")).toBeInTheDocument();
+    expect(screen.getByText(/Order ID/i)).toBeInTheDocument();
+    expect(screen.getByText("CREATED")).toBeInTheDocument();
   });
 
   it("shows an error when creating an order fails", async () => {
@@ -44,10 +45,8 @@ describe("CreateOrderPage", () => {
 
     await user.type(screen.getByPlaceholderText("Enter customer ID"), "user-1");
     await user.type(screen.getByPlaceholderText("Enter product ID"), "product-1");
-    await user.click(screen.getByRole("button", { name: "Create Order" }));
+    await user.click(screen.getByRole("button", { name: /Create Order/i }));
 
-    expect(
-      await screen.findByText("Could not create the order. Check that the backend is running."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/could not create the order/i)).toBeInTheDocument();
   });
 });

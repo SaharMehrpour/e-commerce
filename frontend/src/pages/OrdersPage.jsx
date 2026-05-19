@@ -27,10 +27,40 @@ function OrdersPage() {
 
   return (
     <section className="page-panel">
-      <div className="page-header">
-        <h2>All Orders</h2>
-        <button type="button" onClick={loadOrders} disabled={isLoading}>
-          {hasLoaded ? "Refresh" : "Load Orders"}
+      <div className="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h2 className="mb-1">All Orders</h2>
+
+          <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
+            View and manage all customer orders
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={loadOrders}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+              />
+              Loading...
+            </>
+          ) : hasLoaded ? (
+            <>
+              <i className="bi bi-arrow-clockwise me-1"></i>
+              Refresh
+            </>
+          ) : (
+            <>
+              <i className="bi bi-cloud-download me-1"></i>
+              Load Orders
+            </>
+          )}
         </button>
       </div>
 
@@ -45,17 +75,51 @@ function OrdersPage() {
         <p className="message">No orders yet.</p>
       )}
 
-      <div className="orders-list">
-        {orders.map((order) => (
-          <article className="order-card" key={order.id}>
-            <p>ID: {order.id}</p>
-            <p>User: {order.userId}</p>
-            <p>Product: {order.productId}</p>
-            <p>Quantity: {order.quantity}</p>
-            <p>Status: {order.status}</p>
-          </article>
-        ))}
-      </div>
+      {orders.length > 0 && (
+        <table className="table table-hover align-middle orders-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>User</th>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {orders.map((order) => (
+              <tr key={order.id}>
+                <td className="id-cell">
+                  <span>{order.id}</span>
+
+                  <button
+                    className="copy-btn"
+                    onClick={() => navigator.clipboard.writeText(order.id)}
+                  >
+                    <i className="bi bi-copy"></i>
+                  </button>
+                </td>
+                <td>{order.userId}</td>
+                <td>{order.productId}</td>
+                <td>{order.quantity}</td>
+
+                <td>
+                  <span
+                    className={`status-badge ${
+                      order.status === "CREATED"
+                        ? "status-created"
+                        : "status-cancelled"
+                    }`}
+                  >
+                    {order.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

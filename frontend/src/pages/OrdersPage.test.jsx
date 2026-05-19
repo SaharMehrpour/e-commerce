@@ -20,7 +20,7 @@ describe("OrdersPage", () => {
     render(<OrdersPage />);
 
     expect(getOrders).not.toHaveBeenCalled();
-    expect(screen.getByText("Click Load Orders to fetch orders from the API.")).toBeInTheDocument();
+    expect(screen.getByText(/click load orders/i)).toBeInTheDocument();
   });
 
   it("loads orders when clicked and keeps the latest loaded orders after remount", async () => {
@@ -29,15 +29,16 @@ describe("OrdersPage", () => {
 
     const { unmount } = render(<OrdersPage />);
 
-    await user.click(screen.getByRole("button", { name: "Load Orders" }));
+    await user.click(screen.getByRole("button", { name: /load orders/i }));
 
-    expect(await screen.findByText("ID: order-1")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
+    expect(await screen.findByText(/order-1/i)).toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: /refresh/i })).toBeInTheDocument();
 
     unmount();
     render(<OrdersPage />);
 
-    expect(screen.getByText("ID: order-1")).toBeInTheDocument();
+    expect(screen.getByText(/order-1/i)).toBeInTheDocument();
     expect(getOrders).toHaveBeenCalledTimes(1);
   });
 
@@ -47,12 +48,14 @@ describe("OrdersPage", () => {
 
     render(<OrdersPage />);
 
-    await user.click(screen.getByRole("button", { name: "Load Orders" }));
-    expect(await screen.findByText("ID: order-1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /load orders/i }));
 
-    await user.click(screen.getByRole("button", { name: "Refresh" }));
+    expect(await screen.findByText(/order-1/i)).toBeInTheDocument();
 
-    expect(await screen.findByText("ID: order-2")).toBeInTheDocument();
-    expect(screen.queryByText("ID: order-1")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /refresh/i }));
+
+    expect(await screen.findByText(/order-2/i)).toBeInTheDocument();
+
+    expect(screen.queryByText(/order-1/i)).not.toBeInTheDocument();
   });
 });

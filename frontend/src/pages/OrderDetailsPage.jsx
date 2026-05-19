@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getOrderById } from "../api/orders";
+import { cancelOrderById, getOrderById } from "../api/orders";
 
 function OrderDetailsPage() {
   const [orderId, setOrderId] = useState("");
@@ -18,6 +18,20 @@ function OrderDetailsPage() {
       setOrder(data);
     } catch {
       setError("No order found for that ID.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleCancel() {
+    setError("");
+    setIsLoading(true);
+    
+    try { 
+      const data = await cancelOrderById(orderId.trim());
+      setOrder(data);
+    } catch {
+      setError("Failed to cancel the order. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -55,6 +69,15 @@ function OrderDetailsPage() {
           <p>Status: {order.status}</p>
         </div>
       )}
+      
+      {order && order.status === "CREATED" && (
+        <div className="result-box">
+          <button type="submit" disabled={isLoading} onClick={handleCancel}>
+            {isLoading ? "Sending Request..." : "Cancel Order"}
+          </button>
+        </div>
+      )}
+
     </section>
   );
 }

@@ -13,3 +13,11 @@ export const secondOrder = {
   quantity: 4,
   status: "CREATED",
 };
+
+export const cancelledOrder = {
+  id: "order-2",
+  userId: "user-2",
+  productId: "product-2",
+  quantity: 4,
+  status: "CANCELLED",
+};

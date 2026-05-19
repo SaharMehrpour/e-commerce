@@ -36,6 +36,17 @@ function OrdersPage() {
           </p>
         </div>
 
+        {isLoading && (
+          <div className="loading-overlay">
+            <div className="spinner-box">
+              <div className="spinner-border text-primary" />
+              <div className="loading-text" role="status" aria-label="Loading Orders">
+                Loading orders...
+              </div>
+            </div>
+          </div>
+        )}
+
         <button
           type="button"
           className="btn btn-primary btn-sm"
@@ -72,7 +83,9 @@ function OrdersPage() {
       {error && <p className="message error">{error}</p>}
 
       {hasLoaded && !isLoading && !error && orders.length === 0 && (
-        <p className="message">No orders yet.</p>
+        <p className="message" role="status" aria-label="No orders yet">
+          No orders yet.
+        </p>
       )}
 
       {orders.length > 0 && (

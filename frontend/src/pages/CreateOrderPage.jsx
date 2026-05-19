@@ -49,6 +49,15 @@ function CreateOrderPage() {
         </p>
       </div>
 
+      {isSubmitting && (
+        <div className="loading-overlay">
+          <div className="spinner-box">
+            <div className="spinner-border text-primary" role="status" />
+              <div className="loading-text">Submitting an order...</div>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div className="row g-3">
           <div className="col-md-6">

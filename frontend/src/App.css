@@ -38,6 +38,7 @@ body {
   border-radius: 14px;
   padding: 1.25rem;
   box-shadow: var(--shadow);
+  position: relative;
 }
 
 .page-container {
@@ -261,4 +262,31 @@ body {
   .app-shell {
     width: min(100% - 20px, 1100px);
   }
+}
+
+/* =========================
+   SPINNER / LOADING
+========================= */
+
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  z-index: 10;
+}
+
+.spinner-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.loading-text {
+  font-size: 0.9rem;
+  color: #6b7280;
 }

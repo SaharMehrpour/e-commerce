@@ -49,6 +49,15 @@ function OrderDetailsPage() {
         </div>
       </div>
 
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="spinner-box">
+            <div className="spinner-border text-primary" role="status" />
+            <div className="loading-text">Loading the order...</div>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="mb-3">
         <div className="input-group">
           <input

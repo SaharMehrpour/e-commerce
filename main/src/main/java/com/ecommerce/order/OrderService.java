@@ -56,7 +56,17 @@ public class OrderService {
         return repository.findById(id);
     }
 
-    @CachePut(value = "orders", key = "#id", unless = "#result.isEmpty()")
+    @Caching(
+        put = @CachePut(
+                value = "orders",
+                key = "#id",
+                unless = "#result == null"
+        ),
+        evict = @CacheEvict(
+                value = "orders",
+                key = "'all'"
+        )
+    )
     public Optional<Order> cancelOrder(String id) {
 
         Optional<Order> optionalOrder = repository.findById(id);

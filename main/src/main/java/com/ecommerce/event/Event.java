@@ -2,14 +2,14 @@ package com.ecommerce.event;
 
 import java.time.Instant;
 
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
 public abstract class Event {
 
     private String eventId;
     private String eventType;
     private Instant createdAt;
-
-    public Event() {
-    }
 
     public Event(
             String eventId,

@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.util.ArrayList;
@@ -106,6 +107,30 @@ public class OrderControllerTest {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    void shouldCancelOrderWhenFound() throws Exception {
+        Order order = new Order("u1", "p1", 2);
+        order.setStatus("CREATED");
+
+        orderService.order = Optional.of(order);
+
+        mockMvc.perform(patch("/orders/1/cancel"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.userId").value("u1"))
+            .andExpect(jsonPath("$.productId").value("p1"))
+            .andExpect(jsonPath("$.quantity").value(2))
+            .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+    }
+
+    @Test
+    void shouldReturn404WhenCancelledOrderNotFound() throws Exception {
+        orderService.order = Optional.empty();
+
+        mockMvc.perform(patch("/orders/999/cancel"))
+            .andExpect(status().isNotFound());
+    }
+
     @TestConfiguration
     static class TestConfig {
 
@@ -137,6 +162,12 @@ public class OrderControllerTest {
 
         @Override
         public Optional<Order> getOrder(String id) {
+            return order;
+        }
+
+        @Override
+        public Optional<Order> cancelOrder(String id) {
+            order.ifPresent(o -> o.setStatus("CANCELLED"));
             return order;
         }
     }

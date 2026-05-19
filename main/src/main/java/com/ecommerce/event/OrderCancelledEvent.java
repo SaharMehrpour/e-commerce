@@ -2,14 +2,14 @@ package com.ecommerce.event;
 
 import java.time.Instant;
 
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
 public class OrderCancelledEvent extends Event {
 
     private String orderId;
     private String userId;
     private String status;
-
-    public OrderCancelledEvent() {
-    }
 
     public OrderCancelledEvent(
             String eventId,

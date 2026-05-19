@@ -2,6 +2,9 @@ package com.ecommerce.event;
 
 import java.time.Instant;
 
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
 public class OrderCreatedEvent extends Event {
 
     private String orderId;
@@ -9,9 +12,6 @@ public class OrderCreatedEvent extends Event {
     private String productId;
     private int quantity;
     private String status;
-
-    public OrderCreatedEvent() {
-    }
 
     public OrderCreatedEvent(
             String eventId,

@@ -74,6 +74,12 @@ class OrderServiceTest {
     }
 
     @Test
+    void getOrderShouldReturnNotPresentForNonExistentOrder() {
+        Optional<Order> foundOrder = orderService.getOrder("non-existent-id");
+        assertFalse(foundOrder.isPresent());
+    }
+
+    @Test
     void cancelOrderShouldUpdateStatusAndPublishEvent() {
 
         Order order = new Order("u1", "p1", 2);
@@ -102,6 +108,12 @@ class OrderServiceTest {
         assertEquals("order-1", event.getOrderId());
         assertEquals("u1", event.getUserId());
         assertEquals("CANCELLED", event.getStatus());
+    }
+
+    @Test
+    void cancelOrderShouldReturnNotPresentForNonExistentOrder() {
+        Optional<Order> foundOrder = orderService.cancelOrder("non-existent-id");
+        assertFalse(foundOrder.isPresent());
     }
 
     private static class FakeOrderRepository {

@@ -30,17 +30,47 @@ describe("OrderDetailsPage", () => {
     expect(screen.getByText("product-1")).toBeInTheDocument();
   });
 
-  it("shows an error when no order is found", async () => {
+  it("shows 'not found' error when order does not exist (404)", async () => {
     const user = userEvent.setup();
-    getOrderById.mockRejectedValue(new Error("not found"));
+
+    getOrderById.mockRejectedValue(
+      Object.assign(new Error("Not Found"), { status: 404 }),
+    );
 
     render(<OrderDetailsPage />);
 
     await user.type(screen.getByPlaceholderText(/enter order id/i), "missing");
     await user.click(screen.getByRole("button", { name: /get order/i }));
 
-    expect(await screen.findByText(/No order found for that ID/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no order found for that id/i)).toBeInTheDocument();
   });
+
+  it("shows backend error when request fails due to server issue", async () => {
+    const user = userEvent.setup();
+
+    getOrderById.mockRejectedValue(
+      new Error("Network Error"),
+    );
+
+    render(<OrderDetailsPage />);
+
+    await user.type(screen.getByPlaceholderText(/enter order id/i), "order-1");
+    await user.click(screen.getByRole("button", { name: /get order/i }));
+
+    expect(await screen.findByText(/backend is not reachable\. please try again later\./i)).toBeInTheDocument();
+  });
+
+  // it("shows an error when no order is found", async () => {
+  //   const user = userEvent.setup();
+  //   getOrderById.mockRejectedValue(new Error("not found"));
+
+  //   render(<OrderDetailsPage />);
+
+  //   await user.type(screen.getByPlaceholderText(/enter order id/i), "missing");
+  //   await user.click(screen.getByRole("button", { name: /get order/i }));
+
+  //   expect(await screen.findByText(/No order found for that ID/i)).toBeInTheDocument();
+  // });
 
   it("shows a cancel button when a created order is found", async () => {
     const user = userEvent.setup();
@@ -137,7 +167,7 @@ describe("OrderDetailsPage", () => {
     const user = userEvent.setup();
 
     getOrderById
-      .mockRejectedValueOnce(new Error("not found"))
+      .mockRejectedValueOnce(Object.assign(new Error("Not Found"), { status: 404 }),)
       .mockResolvedValueOnce(firstOrder);
 
     render(<OrderDetailsPage />);

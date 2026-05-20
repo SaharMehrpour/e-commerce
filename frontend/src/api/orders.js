@@ -25,7 +25,9 @@ export async function getOrderById(id) {
     const response = await fetch(`${BASE_URL}/${id}`);
 
     if (!response.ok) {
-        throw new Error("Order not found");
+        const error = new Error("Request failed");
+        error.status = response.status;
+        throw error;
     }
 
     return response.json();

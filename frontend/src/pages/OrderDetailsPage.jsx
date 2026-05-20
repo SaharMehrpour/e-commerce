@@ -16,8 +16,12 @@ function OrderDetailsPage() {
     try {
       const data = await getOrderById(orderId.trim());
       setOrder(data);
-    } catch {
-      setError("No order found for that ID.");
+    } catch (err) {
+      if (err?.status === 404) {
+        setError("No order found for that ID.");
+      } else {
+        setError("Backend is not reachable. Please try again later.");
+      }
     } finally {
       setIsLoading(false);
     }

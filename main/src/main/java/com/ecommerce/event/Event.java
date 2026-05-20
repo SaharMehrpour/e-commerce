@@ -1,7 +1,5 @@
 package com.ecommerce.event;
 
-import java.time.Instant;
-
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
@@ -9,12 +7,12 @@ public abstract class Event {
 
     private String eventId;
     private String eventType;
-    private Instant createdAt;
+    private String createdAt;
 
     public Event(
             String eventId,
             String eventType,
-            Instant createdAt
+            String createdAt
     ) {
         this.eventId = eventId;
         this.eventType = eventType;
@@ -29,7 +27,7 @@ public abstract class Event {
         return eventType;
     }
 
-    public Instant getCreatedAt() {
+    public String getCreatedAt() {
         return createdAt;
     }
 
@@ -41,7 +39,7 @@ public abstract class Event {
         this.eventType = eventType;
     }
 
-    public void setCreatedAt(Instant createdAt) {
+    public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 }

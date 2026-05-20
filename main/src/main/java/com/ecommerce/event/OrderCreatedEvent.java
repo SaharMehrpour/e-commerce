@@ -24,7 +24,7 @@ public class OrderCreatedEvent extends Event {
         super(
                 eventId,
                 "ORDER_CREATED",
-                Instant.now()
+                Instant.now().toString()
         );
 
         this.orderId = orderId;

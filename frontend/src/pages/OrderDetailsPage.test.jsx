@@ -60,18 +60,6 @@ describe("OrderDetailsPage", () => {
     expect(await screen.findByText(/backend is not reachable\. please try again later\./i)).toBeInTheDocument();
   });
 
-  // it("shows an error when no order is found", async () => {
-  //   const user = userEvent.setup();
-  //   getOrderById.mockRejectedValue(new Error("not found"));
-
-  //   render(<OrderDetailsPage />);
-
-  //   await user.type(screen.getByPlaceholderText(/enter order id/i), "missing");
-  //   await user.click(screen.getByRole("button", { name: /get order/i }));
-
-  //   expect(await screen.findByText(/No order found for that ID/i)).toBeInTheDocument();
-  // });
-
   it("shows a cancel button when a created order is found", async () => {
     const user = userEvent.setup();
     getOrderById.mockResolvedValue(firstOrder);

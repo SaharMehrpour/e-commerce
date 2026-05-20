@@ -1,0 +1,58 @@
+name: PR Checks
+
+on:
+  pull_request:
+
+jobs:
+
+  frontend-lint-and-test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run frontend tests
+        run: npm run test -- --run
+
+
+  backend-check:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: main
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Run tests
+        run: ./mvnw test
+
+      - name: Run Checkstyle
+        run: ./mvnw checkstyle:check

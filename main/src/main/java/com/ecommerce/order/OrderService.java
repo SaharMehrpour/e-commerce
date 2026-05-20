@@ -6,7 +6,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
-import com.ecommerce.event.*;
+import com.ecommerce.event.OrderCancelledEvent;
+import com.ecommerce.event.OrderCreatedEvent;
 import com.ecommerce.kafka.OrderKafkaProducer;
 
 import java.util.List;

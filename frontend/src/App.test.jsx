@@ -10,20 +10,23 @@ vi.mock("./api/orders", () => ({
 }));
 
 describe("App", () => {
-  it("starts on the home page and navigates to the order pages", async () => {
+  it("starts on home page and navigates between pages", async () => {
     const user = userEvent.setup();
 
     render(<App />);
 
-    expect(screen.getByText("Order Management Demo")).toBeInTheDocument();
+    expect(screen.getByText(/order management demo/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Give Order" }));
-    expect(screen.getByRole("heading", { name: "Give An Order" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /give order/i }));
 
-    await user.click(screen.getByRole("button", { name: "All Orders" }));
-    expect(screen.getByRole("heading", { name: "All Orders" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /create order/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Order Info" }));
-    expect(screen.getByRole("heading", { name: "Order By ID" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /all orders/i }));
+
+    expect(screen.getByRole("heading", { name: /all orders/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /order info/i }));
+
+    expect(screen.getByRole("heading", { name: /order lookup/i })).toBeInTheDocument();
   });
 });

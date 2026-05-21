@@ -9,6 +9,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.ecommerce.dto.CreateOrderRequest;
+import com.ecommerce.dto.UpdateOrderRequest;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -131,6 +134,48 @@ public class OrderControllerTest {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    void shouldUpdateOrderFields() throws Exception {
+
+        Order order = new Order("u1", "updated-product", 10);
+        order.setStatus("CREATED");
+
+        orderService.order = Optional.of(order);
+
+        String updateJson = """
+            {
+                "quantity": 10,
+                "productId": "updated-product"
+            }
+            """;
+
+        mockMvc.perform(patch("/orders/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value("u1"))
+                .andExpect(jsonPath("$.productId").value("updated-product"))
+                .andExpect(jsonPath("$.quantity").value(10))
+                .andExpect(jsonPath("$.status").value("CREATED"));
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingNonExistingOrder() throws Exception {
+
+        orderService.order = Optional.empty();
+
+        String updateJson = """
+            {
+                "quantity": 10
+            }
+            """;
+
+        mockMvc.perform(patch("/orders/999")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateJson))
+                .andExpect(status().isNotFound());
+    }
+
     @TestConfiguration
     static class TestConfig {
 
@@ -151,7 +196,7 @@ public class OrderControllerTest {
         }
 
         @Override
-        public Order createOrder(Order order) {
+        public Order createOrder(CreateOrderRequest request) {
             return orderToCreate;
         }
 
@@ -168,6 +213,21 @@ public class OrderControllerTest {
         @Override
         public Optional<Order> cancelOrder(String id) {
             order.ifPresent(o -> o.setStatus("CANCELLED"));
+            return order;
+        }
+
+        @Override
+        public Optional<Order> updateOrder(String id, UpdateOrderRequest request) {
+
+            order.ifPresent(o -> {
+                if (request.getQuantity() != null) {
+                    o.setQuantity(request.getQuantity());
+                }
+                if (request.getProductId() != null) {
+                    o.setProductId(request.getProductId());
+                }
+            });
+
             return order;
         }
     }

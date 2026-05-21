@@ -3,7 +3,13 @@ package com.ecommerce.order;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.ecommerce.dto.CreateOrderRequest;
+import com.ecommerce.dto.UpdateOrderRequest;
 import com.ecommerce.event.*;
+import com.ecommerce.exception.InvalidOrderException;
+import com.ecommerce.exception.OrderAlreadyCancelledException;
+import com.ecommerce.exception.OrderNotFoundException;
+import com.ecommerce.exception.OrderNotUpdatableException;
 import com.ecommerce.kafka.producer.OrderKafkaProducer;
 
 import java.lang.reflect.Proxy;
@@ -28,9 +34,12 @@ class OrderServiceTest {
 
     @Test
     void createOrderShouldSaveOrderAndPublishEvent() {
-        Order order = new Order("u1", "p1", 2);
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setUserId("u1");
+        request.setProductId("p1");
+        request.setQuantity(2);
 
-        Order createdOrder = orderService.createOrder(order);
+        Order createdOrder = orderService.createOrder(request);
 
         assertEquals("order-1", createdOrder.getId());
         assertEquals("CREATED", createdOrder.getStatus());
@@ -111,9 +120,165 @@ class OrderServiceTest {
     }
 
     @Test
-    void cancelOrderShouldReturnNotPresentForNonExistentOrder() {
-        Optional<Order> foundOrder = orderService.cancelOrder("non-existent-id");
-        assertFalse(foundOrder.isPresent());
+    void createOrderShouldThrowWhenUserIdIsMissing() {
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setProductId("p1");
+        request.setQuantity(2);
+
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.createOrder(request)
+        );
+
+        assertEquals("User ID is required", ex.getMessage());
+    }
+
+    @Test
+    void createOrderShouldThrowWhenProductIdIsMissing() {
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setUserId("u1");
+        request.setQuantity(2);
+    
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.createOrder(request)
+        );
+
+        assertEquals("Product ID is required", ex.getMessage());
+    }
+
+    @Test
+    void createOrderShouldThrowWhenQuantityIsInvalid() {
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setUserId("u1");
+        request.setProductId("p1");
+        request.setQuantity(0);
+
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.createOrder(request)
+        );
+
+        assertEquals(
+                "Quantity must be greater than zero",
+                ex.getMessage()
+        );
+    }
+
+    @Test
+    void cancelOrderShouldThrowWhenOrderNotFound() {
+
+        repository.orderById = Optional.empty();
+
+        OrderNotFoundException ex = assertThrows(
+                OrderNotFoundException.class,
+                () -> orderService.cancelOrder("missing-id")
+        );
+
+        assertEquals(
+                "Order not found with id: missing-id",
+                ex.getMessage()
+        );
+    }
+
+    @Test
+    void cancelOrderShouldThrowWhenOrderAlreadyCancelled() {
+
+        Order order = new Order("u1", "p1", 2);
+
+        order.setId("order-1");
+        order.setStatus("CANCELLED");
+
+        repository.orderById = Optional.of(order);
+
+        OrderAlreadyCancelledException ex = assertThrows(
+                OrderAlreadyCancelledException.class,
+                () -> orderService.cancelOrder("order-1")
+        );
+
+        assertEquals(
+                "Order is already cancelled",
+                ex.getMessage()
+        );
+    }
+
+    @Test
+    void updateOrderShouldUpdateFields() {
+
+        Order order = new Order("u1", "p1", 2);
+
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        UpdateOrderRequest request = new UpdateOrderRequest();
+
+        request.setQuantity(10);
+        request.setProductId("updated-product");
+
+        Optional<Order> updatedOrder =
+                orderService.updateOrder("order-1", request);
+
+        assertTrue(updatedOrder.isPresent());
+
+        Order result = updatedOrder.get();
+
+        assertEquals(10, result.getQuantity());
+        assertEquals("updated-product", result.getProductId());
+    }
+
+    @Test
+    void updateOrderShouldThrowWhenOrderCancelled() {
+
+        Order order = new Order("u1", "p1", 2);
+
+        order.setId("order-1");
+        order.setStatus("CANCELLED");
+
+        repository.orderById = Optional.of(order);
+
+        UpdateOrderRequest request = new UpdateOrderRequest();
+
+        request.setQuantity(5);
+
+        OrderNotUpdatableException ex = assertThrows(
+                OrderNotUpdatableException.class,
+                () -> orderService.updateOrder("order-1", request)
+        );
+
+        assertEquals(
+                "Cannot update a cancelled order",
+                ex.getMessage()
+        );
+    }
+
+    @Test
+    void updateOrderShouldThrowWhenQuantityInvalid() {
+
+        Order order = new Order("u1", "p1", 2);
+
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        UpdateOrderRequest request = new UpdateOrderRequest();
+
+        request.setQuantity(0);
+
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.updateOrder("order-1", request)
+        );
+
+        assertEquals(
+                "Quantity must be greater than zero",
+                ex.getMessage()
+        );
     }
 
     private static class FakeOrderRepository {

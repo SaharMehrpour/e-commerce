@@ -4,7 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.ecommerce.event.*;
-import com.ecommerce.kafka.OrderKafkaProducer;
+import com.ecommerce.kafka.producer.OrderKafkaProducer;
 
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;

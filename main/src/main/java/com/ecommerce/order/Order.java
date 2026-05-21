@@ -5,7 +5,10 @@ import java.io.Serializable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import lombok.NoArgsConstructor;
+
 @Document(collection = "orders")
+@NoArgsConstructor
 public class Order implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -16,9 +19,6 @@ public class Order implements Serializable {
     private String productId;
     private int quantity;
     private String status;
-
-    public Order() {
-    }
 
     public Order(String userId, String productId, int quantity) {
         this.userId = userId;

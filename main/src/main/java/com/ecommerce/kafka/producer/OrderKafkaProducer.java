@@ -1,4 +1,4 @@
-package com.ecommerce.kafka;
+package com.ecommerce.kafka.producer;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;

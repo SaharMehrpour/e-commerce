@@ -20,7 +20,7 @@ public class OrderCancelledEvent extends Event {
         super(
                 eventId,
                 "ORDER_CANCELLED",
-                Instant.now()
+                Instant.now().toString()
         );
 
         this.orderId = orderId;

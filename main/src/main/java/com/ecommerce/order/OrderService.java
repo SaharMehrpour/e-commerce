@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderCreatedEvent;
-import com.ecommerce.kafka.OrderKafkaProducer;
+import com.ecommerce.kafka.producer.OrderKafkaProducer;
 
 import java.util.List;
 import java.util.Optional;

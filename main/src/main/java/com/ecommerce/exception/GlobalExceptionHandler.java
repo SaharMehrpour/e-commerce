@@ -1,0 +1,69 @@
+package com.ecommerce.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<?> handleOrderNotFoundException(
+            OrderNotFoundException ex
+    ) {
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "Order Not Found",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+
+    @ExceptionHandler(OrderAlreadyCancelledException.class)
+    public ResponseEntity<?> handleOrderAlreadyCancelledException(
+            OrderAlreadyCancelledException ex
+    ) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "Order Already Cancelled",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidOrderException.class)
+    public ResponseEntity<?> handleInvalidOrderException(
+            InvalidOrderException ex
+    ) {
+
+        return ResponseEntity.badRequest().body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "Invalid Order",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+
+    @ExceptionHandler(OrderNotUpdatableException.class)
+    public ResponseEntity<?> handleOrderNotUpdatableException(
+            OrderNotUpdatableException ex
+    ) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "Order Update Failed",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+}

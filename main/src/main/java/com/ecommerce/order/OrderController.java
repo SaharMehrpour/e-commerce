@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ecommerce.dto.CreateOrderRequest;
+import com.ecommerce.dto.UpdateOrderRequest;
+
 import java.util.List;
 
 @RestController
@@ -24,8 +27,8 @@ public class OrderController {
     }
 
     @PostMapping
-    public Order createOrder(@RequestBody Order order) {
-        return orderService.createOrder(order);
+    public Order createOrder(@RequestBody CreateOrderRequest request) {
+        return orderService.createOrder(request);
     }
 
     @GetMapping
@@ -43,6 +46,13 @@ public class OrderController {
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<Order> cancelOrder(@PathVariable String id) {
         return orderService.cancelOrder(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Order> updateOrderFields(@PathVariable String id, @RequestBody UpdateOrderRequest request) {
+        return orderService.updateOrder(id, request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

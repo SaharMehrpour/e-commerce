@@ -25,6 +25,9 @@ spring:
         spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
 
+  mongodb:
+    uri: mongodb://localhost:27017/ecommerce
+  
   data:
     redis:
       host: localhost

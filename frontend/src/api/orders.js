@@ -33,6 +33,23 @@ export async function getOrderById(id) {
     return response.json();
 }
 
+export async function updateOrder(id, updatedOrder) {
+
+    const response = await fetch(`${BASE_URL}/${id}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(updatedOrder)
+    });
+
+    if (!response.ok) {
+        throw new Error("Order not found");
+    }
+
+    return response.json();
+}
+
 export async function cancelOrderById(id) {
 
     const response = await fetch(`${BASE_URL}/${id}/cancel`, { method: "PATCH" });

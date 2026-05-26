@@ -2,6 +2,8 @@ package com.ecommerce.kafka.producer;
 
 import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderCreatedEvent;
+import com.ecommerce.event.OrderUpdatedEvent;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -21,7 +23,8 @@ class OrderKafkaProducerTest {
         producer = new OrderKafkaProducer(
                 kafkaTemplate,
                 "order-created",
-                "order-cancelled"
+                "order-cancelled",
+                "order-updated"
         );
     }
 
@@ -60,6 +63,24 @@ class OrderKafkaProducerTest {
 
         verify(kafkaTemplate).send(
                 "order-cancelled",
+                "order-1",
+                event
+        );
+    }
+
+    @Test
+    void shouldSendOrderUpdatedEvent() {
+        OrderUpdatedEvent event = new OrderUpdatedEvent(
+                "event-3",
+                "order-1",
+                "p1",
+                3
+        );
+
+        producer.sendOrderUpdatedEvent(event);
+
+        verify(kafkaTemplate).send(
+                "order-updated",
                 "order-1",
                 event
         );

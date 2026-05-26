@@ -25,4 +25,12 @@ public class OrderEventConsumer {
         System.out.println("Type of event: " + event.getClass().getName());
     }
 
+    @KafkaListener(
+        topics = "${app.kafka.topics.order-updated}",
+        containerFactory = "orderUpdatedKafkaListenerFactory"
+    )
+    public void handleOrderUpdated(Event event) {
+        System.out.println("🔄 Order UPDATED received: " + event);
+        System.out.println("Type of event: " + event.getClass().getName());
+    }
 }

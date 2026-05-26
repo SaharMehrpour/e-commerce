@@ -13,6 +13,7 @@ import org.springframework.util.backoff.FixedBackOff;
 
 import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderCreatedEvent;
+import com.ecommerce.event.OrderUpdatedEvent;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -83,6 +84,40 @@ public class KafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(cancelledConsumerFactory());
+        factory.setCommonErrorHandler(errorHandler());
+
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, OrderUpdatedEvent> updatedConsumerFactory() {
+
+        JacksonJsonDeserializer<OrderUpdatedEvent> deserializer =
+                new JacksonJsonDeserializer<>(OrderUpdatedEvent.class);
+
+        deserializer.addTrustedPackages("com.ecommerce.event");
+        deserializer.setUseTypeHeaders(false);
+
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "ecommerce-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new StringDeserializer(),
+                deserializer
+        );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, OrderUpdatedEvent>
+    orderUpdatedKafkaListenerFactory() {
+
+        ConcurrentKafkaListenerContainerFactory<String, OrderUpdatedEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(updatedConsumerFactory());
         factory.setCommonErrorHandler(errorHandler());
 
         return factory;

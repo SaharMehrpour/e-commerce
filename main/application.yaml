@@ -38,3 +38,4 @@ app:
     topics:
       order-created: order-created
       order-cancelled: order-cancelled
+      order-updated: order-updated

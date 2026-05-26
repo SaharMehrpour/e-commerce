@@ -10,6 +10,7 @@ import com.ecommerce.dto.CreateOrderRequest;
 import com.ecommerce.dto.UpdateOrderRequest;
 import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderCreatedEvent;
+import com.ecommerce.event.OrderUpdatedEvent;
 import com.ecommerce.exception.InvalidOrderException;
 import com.ecommerce.exception.OrderAlreadyCancelledException;
 import com.ecommerce.exception.OrderNotFoundException;
@@ -153,6 +154,14 @@ public class OrderService {
             }
 
             repository.save(order);
+            
+            OrderUpdatedEvent event = new OrderUpdatedEvent(
+                    UUID.randomUUID().toString(),
+                    order.getId(),
+                    order.getProductId(),
+                    order.getQuantity()
+            );
+            kafkaProducer.sendOrderUpdatedEvent(event);
         });
 
         return optionalOrder;

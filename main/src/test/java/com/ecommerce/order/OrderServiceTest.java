@@ -229,6 +229,18 @@ class OrderServiceTest {
 
         assertEquals(10, result.getQuantity());
         assertEquals("updated-product", result.getProductId());
+
+        assertInstanceOf(
+                OrderUpdatedEvent.class,
+                kafkaProducer.sentEvent
+        );
+
+        OrderUpdatedEvent event =
+                (OrderUpdatedEvent) kafkaProducer.sentEvent;
+
+        assertEquals("order-1", event.getOrderId());
+        assertEquals(10, event.getQuantity());
+        assertEquals("updated-product", event.getProductId());
     }
 
     @Test
@@ -281,6 +293,103 @@ class OrderServiceTest {
         );
     }
 
+    @Test
+    void updateOrderShouldReturnEmptyWhenOrderNotFound() {
+
+        repository.orderById = Optional.empty();
+
+        UpdateOrderRequest request = new UpdateOrderRequest();
+        request.setQuantity(5);
+        request.setProductId("p1");
+
+        Optional<Order> result = orderService.updateOrder("missing-id", request);
+
+        assertFalse(result.isPresent());
+        assertNull(kafkaProducer.sentEvent);
+    }
+
+    @Test
+    void updateOrderShouldUpdateOnlyQuantityWhenProductIdIsNull() {
+
+        Order order = new Order("u1", "p1", 2);
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        UpdateOrderRequest request = new UpdateOrderRequest();
+        request.setQuantity(10);
+        request.setProductId(null);
+
+        Optional<Order> result = orderService.updateOrder("order-1", request);
+
+        assertTrue(result.isPresent());
+        Order updated = result.get();
+
+        assertEquals(10, updated.getQuantity());
+        assertEquals("p1", updated.getProductId());
+
+        assertInstanceOf(OrderUpdatedEvent.class, kafkaProducer.sentEvent);
+    }
+
+    @Test
+    void updateOrderShouldUpdateOnlyProductIdWhenQuantityIsNull() {
+
+        Order order = new Order("u1", "p1", 2);
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        UpdateOrderRequest request = new UpdateOrderRequest();
+        request.setQuantity(null);
+        request.setProductId("new-product");
+
+        Optional<Order> result = orderService.updateOrder("order-1", request);
+
+        assertTrue(result.isPresent());
+        Order updated = result.get();
+
+        assertEquals(2, updated.getQuantity());
+        assertEquals("new-product", updated.getProductId());
+
+        assertInstanceOf(OrderUpdatedEvent.class, kafkaProducer.sentEvent);
+    }
+
+    @Test
+    void cancelOrderShouldPersistCancelledStatus() {
+
+        Order order = new Order("u1", "p1", 2);
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        Optional<Order> result = orderService.cancelOrder("order-1");
+
+        assertTrue(result.isPresent());
+
+        // verifies repository.save effect (FakeOrderRepository captures it)
+        assertNotNull(repository.savedOrder);
+        assertEquals("CANCELLED", repository.savedOrder.getStatus());
+        assertEquals("order-1", repository.savedOrder.getId());
+    }
+
+    @Test
+    void createOrderShouldThrowWhenQuantityIsNull() {
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setUserId("u1");
+        request.setProductId("p1");
+        request.setQuantity(null);
+
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.createOrder(request));
+
+        assertEquals("Quantity must be greater than zero", ex.getMessage());
+    }
+
     private static class FakeOrderRepository {
 
         private Order savedOrder;
@@ -325,7 +434,7 @@ class OrderServiceTest {
         private Event sentEvent;
 
         private FakeOrderKafkaProducer() {
-            super(null, "order-created", "order-cancelled");
+            super(null, "order-created", "order-cancelled", "order-updated");
         }
 
         @Override
@@ -335,6 +444,11 @@ class OrderServiceTest {
 
         @Override
         public void sendOrderCancelledEvent(OrderCancelledEvent event) {
+            sentEvent = event;
+        }
+
+        @Override
+        public void sendOrderUpdatedEvent(OrderUpdatedEvent event) {
             sentEvent = event;
         }
     }

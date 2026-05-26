@@ -1,74 +1,110 @@
 import { useState } from "react";
-import { cancelOrderById, getOrderById } from "../api/orders";
+import {
+  cancelOrderById,
+  getOrderById,
+  updateOrder,
+} from "../api/orders";
 
 function OrderDetailsPage() {
   const [orderId, setOrderId] = useState("");
   const [order, setOrder] = useState(null);
+  const [orderFields, setOrderFields] = useState(null);
+  const [validatedOrder, setValidatedOrder] = useState(null);
+
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
-  async function handleSubmit(event) {
+  async function handleFindOrder(event) {
     event.preventDefault();
     setError("");
     setOrder(null);
-    setIsLoading(true);
+    setOrderFields(null);
+    setValidatedOrder(null);
+    setIsEditing(false);
 
     try {
+      setIsLoading(true);
       const data = await getOrderById(orderId.trim());
       setOrder(data);
     } catch (err) {
-      if (err?.status === 404) {
-        setError("No order found for that ID.");
-      } else {
-        setError("Backend is not reachable. Please try again later.");
-      }
+      console.error("Failed to fetch order", { err });
+      setError(
+        err?.status === 404
+          ? "No order found for that ID."
+          : "Backend is not reachable. Please try again later."
+      );
     } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleUpdate() {
+    try {
+      setIsLoading(true);
+
+      const data = await updateOrder(orderId.trim(), validatedOrder);
+
+      setOrder(data);
+      setOrderFields(null);
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to update order", { err });
+      setError("Failed to update the order.");
+    } finally {
+      setValidatedOrder(null);
       setIsLoading(false);
     }
   }
 
   async function handleCancel() {
-    setError("");
-    setIsLoading(true);
-    
-    try { 
+    try {
+      setIsLoading(true);
+
       const data = await cancelOrderById(orderId.trim());
+
       setOrder(data);
-    } catch {
-      setError("Failed to cancel the order. Please try again.");
+      setValidatedOrder(null);
+      setOrderFields(null);
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to cancel order", { err });
+      setError("Failed to cancel the order.");
     } finally {
       setIsLoading(false);
     }
   }
 
-  return (
-    <section className="page-panel">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <h2 className="mb-1">Order Lookup</h2>
+  function handleChange(field, value) {
+    setOrderFields((prev) => ({
+      ...(prev || order),
+      [field]: value,
+    }));
 
-          <p className="section-subtitle mb-0">
-            Search for an order by ID
-          </p>
-        </div>
-      </div>
+    setValidatedOrder((prev) => {
+      const nextState = { ...prev };
+      if (order && order[field] === value) {
+        delete nextState[field];
+      } else {
+        nextState[field] = value;
+      }
+      return nextState;
+    });
+  }
 
-      {isLoading && (
-        <div className="loading-overlay">
-          <div className="spinner-box">
-            <div className="spinner-border text-primary" role="status" />
-            <div className="loading-text">Loading the order...</div>
-          </div>
-        </div>
-      )}
+  const displayOrder = orderFields || order;
+  const isSaveDisabled = !validatedOrder || Object.keys(validatedOrder).length === 0 || isLoading;
 
-      <form onSubmit={handleSubmit} className="mb-3">
+  
+  function renderSearch() {
+    return (
+      <form onSubmit={handleFindOrder} className="mb-4">
         <div className="input-group">
           <input
             type="text"
             className="form-control"
             value={orderId}
-            onChange={(event) => setOrderId(event.target.value)}
+            onChange={(e) => setOrderId(e.target.value)}
             placeholder="Enter order ID"
             required
           />
@@ -78,126 +114,211 @@ function OrderDetailsPage() {
             className="btn btn-primary"
             disabled={isLoading}
           >
-            {isLoading ? (
-              <>
-                <span
-                  className="spinner-border spinner-border-sm me-2"
-                  role="status"
-                />
-                Searching...
-              </>
-            ) : (
-              "Get Order"
-            )}
+            {isLoading ? "Searching..." : "Get Order"}
           </button>
         </div>
       </form>
+    );
+  }
 
+  function renderStatusBadge() {
+    return (
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h5 className="mb-0">
+          Order Details
+        </h5>
+
+        <span
+          className={`status-badge ${order.status === "CREATED"
+            ? "status-created"
+            : "status-cancelled"
+            }`}
+        >
+          {order.status}
+        </span>
+      </div>
+    );
+  }
+
+  function renderIDField() {
+    return (
+      <div className="border rounded p-2 mb-3 bg-light">
+        <div className="order-field-label mb-1">
+          Order ID
+        </div>
+
+        <div
+          className="text-truncate"
+          style={{
+            fontSize: "0.9rem",
+            fontFamily: "monospace",
+          }}
+          title={order.id}
+        >
+          {order.id}
+        </div>
+      </div>
+    );
+  }
+
+  function renderUserField() {
+    return (
+      <div className="col-md-4">
+        <div className="order-field compact-field">
+          <span className="order-field-label">
+            User
+          </span>
+          <span>{order.userId}</span>
+        </div>
+      </div>
+    );
+  }
+
+  function renderProductField() {
+    return (
+      <div className="col-md-4">
+        <div className="order-field compact-field">
+          <span className="order-field-label">
+            Product
+          </span>
+
+          {isEditing ? (
+            <input
+              type="text"
+              className="form-control form-control-sm"
+              value={displayOrder?.productId || ""}
+              onChange={(e) => handleChange("productId", e.target.value)}
+            />
+          ) : (
+            <span>{order.productId}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function renderQuantityField() {
+    return (
+      <div className="col-md-4">
+        <div className="order-field compact-field">
+          <span className="order-field-label">
+            Quantity
+          </span>
+
+          {isEditing ? (
+            <input
+              type="number"
+              min="1"
+              className="form-control form-control-sm"
+              value={displayOrder?.quantity || 1}
+              onChange={(e) => handleChange("quantity", Number(e.target.value))}
+            />
+          ) : (
+            <span>{order.quantity}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <section className="page-panel">
+      <div className="mb-4">
+        <h2 className="mb-1">Order Lookup</h2>
+
+        <p className="section-subtitle mb-0">
+          Search for an order by ID
+        </p>
+      </div>
+
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="spinner-box">
+            <div className="spinner-border text-primary" role="status" />
+            <div className="loading-text">
+              Loading order...
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search */}
+      {renderSearch()}
+
+      {/* Error */}
       {error && (
         <div className="alert alert-danger py-2">
           {error}
         </div>
       )}
 
+      {/* Order Card (same style as CreateOrderPage result) */}
       {order && (
-        <div className="card border-0 shadow-sm">
-          <div className="card-body p-3">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <div>
-                <h5 className="mb-0">
-                  Order Information
-                </h5>
-              </div>
+        <div className="alert alert-success border-0 shadow-sm mt-4">
+          {renderStatusBadge()}
 
-              <span
-                className={`status-badge ${
-                  order.status === "CREATED"
-                    ? "status-created"
-                    : "status-cancelled"
-                }`}
-              >
-                {order.status}
-              </span>
-            </div>
+          {/* ID */}
+          {renderIDField()}
 
-            {/* Order ID Row */}
-            <div className="border rounded p-2 mb-3 bg-light">
-              <div className="d-flex justify-content-between align-items-center gap-3">
-                <div className="flex-grow-1 overflow-hidden">
-                  <div className="order-field-label mb-1">
-                    Order ID
-                  </div>
+          {/* Compact fields */}
+          <div className="row g-2">
+            {/* User */}
+            {renderUserField()}
 
-                  <div
-                    className="text-truncate"
-                    title={order.id}
-                    style={{
-                      fontSize: "0.9rem",
-                      fontFamily: "monospace",
+            {/* Product */}
+            {renderProductField()}
+
+            {/* Quantity */}
+            {renderQuantityField()}
+          </div>
+
+          {/* Actions */}
+          {order.status === "CREATED" && (
+            <div className="mt-4 d-flex justify-content-end gap-2">
+              {!isEditing ? (
+                <>
+                  <button
+                    className="btn btn-outline-danger btn-sm"
+                    disabled={isLoading}
+                    onClick={handleCancel}
+                    type="button"
+                  >
+                    Cancel Order
+                  </button>
+
+                  <button
+                    className="btn btn-primary btn-sm"
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    Update Order
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="btn btn-light border btn-sm"
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setOrderFields(null);
                     }}
                   >
-                    {order.id}
-                  </div>
-                </div>
-              </div>
+                    Discard
+                  </button>
+
+                  <button
+                    className="btn btn-success btn-sm"
+                    type="button"
+                    onClick={handleUpdate}
+                    disabled={isSaveDisabled}
+                  >
+                    Save Changes
+                  </button>
+                </>
+              )}
             </div>
-
-            {/* Compact Fields */}
-            <div className="row g-2">
-              <div className="col-md-4">
-                <div className="order-field compact-field">
-                  <span className="order-field-label">
-                    User
-                  </span>
-
-                  <span>{order.userId}</span>
-                </div>
-              </div>
-
-              <div className="col-md-4">
-                <div className="order-field compact-field">
-                  <span className="order-field-label">
-                    Product
-                  </span>
-
-                  <span>{order.productId}</span>
-                </div>
-              </div>
-
-              <div className="col-md-4">
-                <div className="order-field compact-field">
-                  <span className="order-field-label">
-                    Quantity
-                  </span>
-
-                  <span>{order.quantity}</span>
-                </div>
-              </div>
-            </div>
-
-            {order.status === "CREATED" && (
-              <div className="mt-3 d-flex justify-content-end">
-                <button
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                  disabled={isLoading}
-                  onClick={handleCancel}
-                >
-                  {isLoading ? (
-                    <>
-                      <span
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                      />
-                      Sending Request...
-                    </>
-                  ) : (
-                    "Cancel Order"
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       )}
     </section>

@@ -38,6 +38,20 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
+  postgres-inventory:
+    image: postgres:16
+    container_name: postgres-inventory
+    restart: always
+    environment:
+      POSTGRES_DB: inventory_db
+      POSTGRES_USER: postgress
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - inventory_pgdata:/var/lib/postgresql/data    
+
 volumes:
   mongo-data:
   redis-data:
+  inventory_pgdata:

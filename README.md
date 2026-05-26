@@ -51,10 +51,12 @@ Future microservices (Payment, Inventory, Shipping)
 - Cancel order
 - Fetch all orders
 - Fetch single order
+- Update single order
 
 ### Event-Driven Messaging
 - `OrderCreatedEvent`
 - `OrderCancelledEvent`
+- `OrderUpdatedEvent`
 - Kafka producer integration
 
 ### Caching

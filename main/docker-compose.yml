@@ -44,7 +44,7 @@ services:
     restart: always
     environment:
       POSTGRES_DB: inventory_db
-      POSTGRES_USER: postgress
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
       - "5432:5432"

@@ -160,21 +160,21 @@ body {
 }
 
 /* =========================
-   ORDER DETAILS / GRID
+   INVENTORY ITEM DETAILS / ORDER DETAILS / GRID
 ========================= */
-.order-grid {
+.order-grid, .inventoryItem-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.8rem;
 }
 
-.order-field {
+.order-field, .inventoryItem-field {
   background: #f9fafb;
   border-radius: 10px;
   padding: 0.8rem;
 }
 
-.order-field-label {
+.order-field-label, .inventoryItem-field-label {
   display: block;
   font-size: 0.72rem;
   font-weight: 700;

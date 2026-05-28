@@ -4,6 +4,8 @@ import CreateOrderPage from "./pages/order/CreateOrderPage";
 import HomePage from "./pages/HomePage";
 import OrderDetailsPage from "./pages/order/OrderDetailsPage";
 import OrdersPage from "./pages/order/OrdersPage";
+import InventoryPage from "./pages/inventory/InventoryPage";
+import InventoryDetailsPage from "./pages/inventory/InventoryDetailsPage";
 
 const pages = {
   home: {
@@ -21,6 +23,14 @@ const pages = {
   details: {
     label: "Order Info",
     component: <OrderDetailsPage />,
+  },
+  inventory: {
+    label: "Inventory",
+    component: <InventoryPage />,
+  },
+  inventoryItem: {
+    label: "Inventory Item Details",
+    component: <InventoryDetailsPage />,
   },
 };
 

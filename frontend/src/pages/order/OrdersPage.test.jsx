@@ -6,7 +6,7 @@ import OrdersPage from "./OrdersPage";
 import { resetOrdersPageCache } from "./ordersPageCache";
 import { firstOrder, secondOrder } from "../../test/testOrders";
 
-vi.mock("../api/orders", () => ({
+vi.mock("../../api/orders", () => ({
   getOrders: vi.fn(),
 }));
 

@@ -9,7 +9,7 @@ import {
 import OrderDetailsPage from "./OrderDetailsPage";
 import { firstOrder, cancelledOrder } from "../../test/testOrders";
 
-vi.mock("../api/orders", () => ({
+vi.mock("../../api/orders", () => ({
   getOrderById: vi.fn(),
   cancelOrderById: vi.fn(),
   updateOrder: vi.fn(),

@@ -5,7 +5,7 @@ import { createOrder } from "../../api/orders";
 import CreateOrderPage from "./CreateOrderPage";
 import { firstOrder } from "../../test/testOrders";
 
-vi.mock("../api/orders", () => ({
+vi.mock("../../api/orders", () => ({
   createOrder: vi.fn(),
 }));
 

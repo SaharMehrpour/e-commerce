@@ -138,6 +138,12 @@ This script will:
 - Get Order by ID `GET /orders/{id}`
 - Cancel Order `PATCH /orders/{id}/cancel`
 
+- Stock product `POST /inventory/add`
+- Reserve stock `POST /inventory/reserve`
+- Deduct stock `POST /inventory/deduct`
+- Restore stock `POST /inventory/release`
+- Check availability `POST /inventory/{product_id}`
+
 
 ## 🧠 Key Design Decisions
 

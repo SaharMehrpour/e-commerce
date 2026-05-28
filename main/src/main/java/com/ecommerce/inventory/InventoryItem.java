@@ -37,10 +37,6 @@ public class InventoryItem {
         return productId;
     }
 
-    public void setProductId(String productId) {
-        this.productId = productId;
-    }
-
     public int getAvailableQuantity() {
         return availableQuantity;
     }

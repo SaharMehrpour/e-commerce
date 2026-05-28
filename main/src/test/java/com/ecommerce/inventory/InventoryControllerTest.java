@@ -12,7 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.ecommerce.dto.InventoryRequest;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ public class InventoryControllerTest {
             }
             """;
         
-        mockMvc.perform(post("/inventory/add")
+        mockMvc.perform(patch("/inventory/add")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isOk())
@@ -64,7 +64,7 @@ public class InventoryControllerTest {
             }
             """;
         
-        mockMvc.perform(post("/inventory/add")
+        mockMvc.perform(patch("/inventory/add")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isOk())
@@ -82,7 +82,7 @@ public class InventoryControllerTest {
             }
             """;
         
-        mockMvc.perform(post("/inventory/reserve")
+        mockMvc.perform(patch("/inventory/reserve")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isNotFound());
@@ -100,7 +100,7 @@ public class InventoryControllerTest {
             }
             """;
         
-            mockMvc.perform(post("/inventory/reserve")
+            mockMvc.perform(patch("/inventory/reserve")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isOk())
@@ -121,7 +121,7 @@ public class InventoryControllerTest {
             }
             """;
         
-            mockMvc.perform(post("/inventory/deduct")
+            mockMvc.perform(patch("/inventory/deduct")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isOk())
@@ -142,7 +142,7 @@ public class InventoryControllerTest {
             }
             """;
         
-            mockMvc.perform(post("/inventory/release")
+            mockMvc.perform(patch("/inventory/release")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isOk())
@@ -161,6 +161,60 @@ public class InventoryControllerTest {
             .andExpect(jsonPath("$.productId").value("p1"))
             .andExpect(jsonPath("$.availableQuantity").value(100))
             .andExpect(jsonPath("$.reservedQuantity").value(50));
+    }
+
+    @Test
+    void shouldUpdateInventoryItemWhenFound() throws Exception {
+        InventoryItem item = new InventoryItem("p1", 100, 50);
+        inventoryService.inventoryItem = Optional.of(item);
+
+        String requestJson = """
+            {
+                "productId": "p1",
+                "availableQuantity": 80,
+                "reservedQuantity": 30
+            }
+            """;
+        
+        mockMvc.perform(patch("/inventory/update")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productId").value("p1"))
+                .andExpect(jsonPath("$.availableQuantity").value(80))
+                .andExpect(jsonPath("$.reservedQuantity").value(30));
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingInventoryItemNotFound() throws Exception {
+        String requestJson = """
+            {
+                "productId": "p1",
+                "availableQuantity": 80,
+                "reservedQuantity": 30
+            }
+            """;
+        
+        mockMvc.perform(patch("/inventory/update")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnAllInventoryItems() throws Exception {
+        InventoryItem item1 = new InventoryItem("p1", 100, 50);
+        InventoryItem item2 = new InventoryItem("p2", 200, 30);
+        inventoryService.inventoryItems = List.of(item1, item2);
+        
+        mockMvc.perform(get("/inventory"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].productId").value("p1"))
+            .andExpect(jsonPath("$[0].availableQuantity").value(100))
+            .andExpect(jsonPath("$[0].reservedQuantity").value(50))
+            .andExpect(jsonPath("$[1].productId").value("p2"))
+            .andExpect(jsonPath("$[1].availableQuantity").value(200))
+            .andExpect(jsonPath("$[1].reservedQuantity").value(30));
     }
     
 
@@ -238,6 +292,27 @@ public class InventoryControllerTest {
             } else {
                 return Optional.empty();
             }
+        }
+
+        @Override
+        public Optional<InventoryItem> updateInventory(InventoryRequest request) {
+            String productId = request.getProductId();
+            if (inventoryItem.isPresent() && inventoryItem.get().getProductId().equals(productId)) {
+                inventoryItemToUpdate = inventoryItem.get();
+                if (request.getAvailableQuantity() != null) {
+                    inventoryItemToUpdate.setAvailableQuantity(request.getAvailableQuantity());
+                }
+                if (request.getReservedQuantity() != null) {
+                    inventoryItemToUpdate.setReservedQuantity(request.getReservedQuantity());
+                }
+                return Optional.of(inventoryItemToUpdate);
+            }
+            return Optional.empty();
+        }
+
+        @Override
+        public List<InventoryItem> getAllInventory() {
+            return inventoryItems;
         }
     }
 }

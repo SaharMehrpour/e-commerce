@@ -7,6 +7,7 @@ import com.ecommerce.dto.InventoryRequest;
 import com.ecommerce.exception.InventoryNotEnoughException;
 import com.ecommerce.exception.InventoryNotFoundException;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -86,5 +87,28 @@ public class InventoryService {
 
     public Optional<InventoryItem> getInventory(String productId) {
         return inventoryRepository.findByProductId(productId);
+    }
+
+    @Transactional
+    public Optional<InventoryItem> updateInventory(InventoryRequest request) {
+        String productId = request.getProductId();
+        InventoryItem item = inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> 
+                    new InventoryNotFoundException("Inventory item not found for product " + productId)
+                );
+
+        if (request.getAvailableQuantity() != null) {
+            item.setAvailableQuantity(request.getAvailableQuantity());
+        }
+        if (request.getReservedQuantity() != null) {
+            item.setReservedQuantity(request.getReservedQuantity());
+        }
+
+        inventoryRepository.save(item);
+        return Optional.of(item);
+    }
+
+    public List<InventoryItem> getAllInventory() {
+        return inventoryRepository.findAll();
     }
 }

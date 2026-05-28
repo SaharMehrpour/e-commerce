@@ -3,7 +3,7 @@ import {
   cancelOrderById,
   getOrderById,
   updateOrder,
-} from "../api/orders";
+} from "../../api/orders";
 
 function OrderDetailsPage() {
   const [orderId, setOrderId] = useState("");

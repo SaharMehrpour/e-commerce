@@ -5,9 +5,9 @@ import {
   getOrderById,
   cancelOrderById,
   updateOrder,
-} from "../api/orders";
+} from "../../api/orders";
 import OrderDetailsPage from "./OrderDetailsPage";
-import { firstOrder, cancelledOrder } from "../test/testOrders";
+import { firstOrder, cancelledOrder } from "../../test/testOrders";
 
 vi.mock("../api/orders", () => ({
   getOrderById: vi.fn(),

@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getOrders } from "../api/orders";
+import { getOrders } from "../../api/orders";
 import OrdersPage from "./OrdersPage";
 import { resetOrdersPageCache } from "./ordersPageCache";
-import { firstOrder, secondOrder } from "../test/testOrders";
+import { firstOrder, secondOrder } from "../../test/testOrders";
 
 vi.mock("../api/orders", () => ({
   getOrders: vi.fn(),

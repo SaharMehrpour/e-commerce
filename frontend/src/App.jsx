@@ -1,9 +1,9 @@
 import { useState } from "react";
 import "./App.css";
-import CreateOrderPage from "./pages/CreateOrderPage";
+import CreateOrderPage from "./pages/order/CreateOrderPage";
 import HomePage from "./pages/HomePage";
-import OrderDetailsPage from "./pages/OrderDetailsPage";
-import OrdersPage from "./pages/OrdersPage";
+import OrderDetailsPage from "./pages/order/OrderDetailsPage";
+import OrdersPage from "./pages/order/OrdersPage";
 
 const pages = {
   home: {

@@ -1,5 +1,9 @@
 package com.ecommerce.inventory;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +23,10 @@ public class InventoryService {
         this.inventoryRepository = inventoryRepository;
     }
 
+    @Caching(
+        put = @CachePut(value = "inventory", key = "#request.productId"),
+        evict = @CacheEvict(value = "inventoryList", allEntries = true)
+    )
     @Transactional
     public Optional<InventoryItem> addStock(InventoryRequest request) {
         String productId = request.getProductId();
@@ -32,6 +40,10 @@ public class InventoryService {
         return Optional.of(item);
     }
 
+    @Caching(
+        put = @CachePut(value = "inventory", key = "#request.productId"),
+        evict = @CacheEvict(value = "inventoryList", allEntries = true)
+    )
     @Transactional
     public Optional<InventoryItem> reserveStock(InventoryRequest request) {
         String productId = request.getProductId();
@@ -53,6 +65,10 @@ public class InventoryService {
         return Optional.of(item);
     }
 
+    @Caching(
+        put = @CachePut(value = "inventory", key = "#request.productId"),
+        evict = @CacheEvict(value = "inventoryList", allEntries = true)
+    )
     @Transactional
     public Optional<InventoryItem> deductStock(InventoryRequest request) {
         String productId = request.getProductId();
@@ -68,6 +84,10 @@ public class InventoryService {
         return Optional.of(item);
     }
 
+    @Caching(
+        put = @CachePut(value = "inventory", key = "#request.productId"),
+        evict = @CacheEvict(value = "inventoryList", allEntries = true)
+    )
     @Transactional
     public Optional<InventoryItem> releaseStock(InventoryRequest request) {
         String productId = request.getProductId();
@@ -85,10 +105,15 @@ public class InventoryService {
         return Optional.of(item);
     }
 
+    @Cacheable(value = "inventory", key = "#productId")
     public Optional<InventoryItem> getInventory(String productId) {
         return inventoryRepository.findByProductId(productId);
     }
 
+    @Caching(
+        put = @CachePut(value = "inventory", key = "#request.productId"),
+        evict = @CacheEvict(value = "inventoryList", allEntries = true)
+    )
     @Transactional
     public Optional<InventoryItem> updateInventory(InventoryRequest request) {
         String productId = request.getProductId();
@@ -108,6 +133,7 @@ public class InventoryService {
         return Optional.of(item);
     }
 
+    @Cacheable(value = "inventoryList")
     public List<InventoryItem> getAllInventory() {
         return inventoryRepository.findAll();
     }

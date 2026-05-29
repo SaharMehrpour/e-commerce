@@ -5,8 +5,10 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ecommerce.dto.CreateOrderRequest;
+import com.ecommerce.dto.InventoryRequest;
 import com.ecommerce.dto.UpdateOrderRequest;
 import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderCreatedEvent;
@@ -15,6 +17,7 @@ import com.ecommerce.exception.InvalidOrderException;
 import com.ecommerce.exception.OrderAlreadyCancelledException;
 import com.ecommerce.exception.OrderNotFoundException;
 import com.ecommerce.exception.OrderNotUpdatableException;
+import com.ecommerce.inventory.InventoryService;
 import com.ecommerce.kafka.producer.OrderKafkaProducer;
 
 import java.util.List;
@@ -26,16 +29,19 @@ public class OrderService {
 
     private final OrderRepository repository;
     private final OrderKafkaProducer kafkaProducer;
+    private final InventoryService inventoryService;
 
-    public OrderService(OrderRepository repository, OrderKafkaProducer kafkaProducer) {
+    public OrderService(OrderRepository repository, OrderKafkaProducer kafkaProducer, InventoryService inventoryService) {
         this.repository = repository;
         this.kafkaProducer = kafkaProducer;
+        this.inventoryService = inventoryService;
     }
 
     @Caching(
             put = @CachePut(value = "orders", key = "#result.id", unless = "#result.id == null"),
             evict = @CacheEvict(value = "orders", key = "'all'")
     )
+    @Transactional
     public Order createOrder(CreateOrderRequest request) {
         if (request.getUserId() == null || request.getUserId().isBlank()) {
             throw new InvalidOrderException("User ID is required");
@@ -48,6 +54,11 @@ public class OrderService {
         if (request.getQuantity() == null || request.getQuantity() <= 0) {
             throw new InvalidOrderException("Quantity must be greater than zero");
         }
+
+        InventoryRequest inventoryRequest = new InventoryRequest();
+        inventoryRequest.setProductId(request.getProductId());
+        inventoryRequest.setQuantity(request.getQuantity());
+        inventoryService.reserveStock(inventoryRequest);
 
         Order order = new Order();
         order.setUserId(request.getUserId());

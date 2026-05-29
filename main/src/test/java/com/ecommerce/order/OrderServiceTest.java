@@ -4,12 +4,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.ecommerce.dto.CreateOrderRequest;
+import com.ecommerce.dto.InventoryRequest;
 import com.ecommerce.dto.UpdateOrderRequest;
 import com.ecommerce.event.*;
 import com.ecommerce.exception.InvalidOrderException;
+import com.ecommerce.exception.InventoryNotEnoughException;
+import com.ecommerce.exception.InventoryNotFoundException;
 import com.ecommerce.exception.OrderAlreadyCancelledException;
 import com.ecommerce.exception.OrderNotFoundException;
 import com.ecommerce.exception.OrderNotUpdatableException;
+import com.ecommerce.inventory.InventoryItem;
+import com.ecommerce.inventory.InventoryService;
 import com.ecommerce.kafka.producer.OrderKafkaProducer;
 
 import java.lang.reflect.Proxy;
@@ -23,13 +28,15 @@ class OrderServiceTest {
 
     private FakeOrderRepository repository;
     private FakeOrderKafkaProducer kafkaProducer;
+    private FakeInventoryService inventoryService;
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
         repository = new FakeOrderRepository();
         kafkaProducer = new FakeOrderKafkaProducer();
-        orderService = new OrderService(repository.proxy(), kafkaProducer);
+        inventoryService = new FakeInventoryService();
+        orderService = new OrderService(repository.proxy(), kafkaProducer, inventoryService);
     }
 
     @Test
@@ -38,6 +45,7 @@ class OrderServiceTest {
         request.setUserId("u1");
         request.setProductId("p1");
         request.setQuantity(2);
+        inventoryService.inventoryItem = new InventoryItem("p1", 10, 0);
 
         Order createdOrder = orderService.createOrder(request);
 
@@ -166,6 +174,56 @@ class OrderServiceTest {
                 "Quantity must be greater than zero",
                 ex.getMessage()
         );
+    }
+
+    @Test
+    void createOrderShouldThrowWhenProductNotFound() {
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setUserId("u1");
+        request.setProductId("p1");
+        request.setQuantity(2);
+
+        InventoryNotFoundException ex = assertThrows(
+                InventoryNotFoundException.class,
+                () -> orderService.createOrder(request)
+        );
+
+        assertEquals("Inventory item not found for product p1", ex.getMessage());
+    }
+
+    @Test
+    void createOrderShouldSucceed() {
+
+        CreateOrderRequest request = new CreateOrderRequest();
+        request.setUserId("u1");
+        request.setProductId("p1");
+        request.setQuantity(2);
+
+        inventoryService.inventoryItem = new InventoryItem("p1", 10, 0);
+
+        Order result = orderService.createOrder(request);
+
+        assertNotNull(result);
+        assertEquals("u1", result.getUserId());
+        assertEquals("p1", result.getProductId());
+        assertEquals(2, result.getQuantity());
+        assertEquals("order-1", result.getId());
+
+        InventoryItem updated = inventoryService.getInventory("p1").orElseThrow();
+        assertEquals(10, updated.getAvailableQuantity());
+        assertEquals(0, updated.getReservedQuantity());
+
+        assertInstanceOf(
+                OrderCreatedEvent.class,
+                kafkaProducer.sentEvent
+        );
+        OrderCreatedEvent event =
+                (OrderCreatedEvent) kafkaProducer.sentEvent;
+        assertEquals("order-1", event.getOrderId());
+        assertEquals("u1", event.getUserId());
+        assertEquals("p1", event.getProductId());
+        assertEquals(2, event.getQuantity());
+        assertEquals("CREATED", event.getStatus());
     }
 
     @Test
@@ -450,6 +508,34 @@ class OrderServiceTest {
         @Override
         public void sendOrderUpdatedEvent(OrderUpdatedEvent event) {
             sentEvent = event;
+        }
+    }
+
+    private static class FakeInventoryService extends InventoryService {
+        private InventoryItem inventoryItem = null;
+        private boolean shouldThrowNotEnough = false;
+
+        private FakeInventoryService() {
+            super(null);
+        }
+
+        @Override
+        public Optional<InventoryItem> reserveStock(InventoryRequest request) {
+            if (inventoryItem == null || !inventoryItem.getProductId().equals(request.getProductId())) {
+                throw new InventoryNotFoundException("Inventory item not found for product " + request.getProductId());
+            }
+            if (shouldThrowNotEnough) {
+                throw new InventoryNotEnoughException("Insufficient stock for product " + request.getProductId());
+            }
+            return Optional.of(new InventoryItem());
+        }
+
+        @Override
+        public Optional<InventoryItem> getInventory(String productId) {
+            if (inventoryItem == null || !inventoryItem.getProductId().equals(productId)) {
+                throw new InventoryNotFoundException("Inventory item not found for product " + productId);
+            }
+            return Optional.of(inventoryItem);
         }
     }
 }

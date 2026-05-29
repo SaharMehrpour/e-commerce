@@ -192,7 +192,7 @@ public class OrderControllerTest {
         private Optional<Order> order = Optional.empty();
 
         TestOrderService() {
-            super(null, null);
+            super(null, null, null);
         }
 
         @Override

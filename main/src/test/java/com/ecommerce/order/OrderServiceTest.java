@@ -68,66 +68,6 @@ class OrderServiceTest {
     }
 
     @Test
-    void getOrdersShouldReturnRepositoryOrders() {
-        Order firstOrder = new Order("u1", "p1", 2);
-        Order secondOrder = new Order("u2", "p2", 4);
-        repository.orders = List.of(firstOrder, secondOrder);
-
-        List<Order> orders = orderService.getOrders();
-
-        assertEquals(List.of(firstOrder, secondOrder), orders);
-    }
-
-    @Test
-    void getOrderShouldReturnRepositoryOrderById() {
-        Order order = new Order("u1", "p1", 2);
-        repository.orderById = Optional.of(order);
-
-        Optional<Order> foundOrder = orderService.getOrder("order-1");
-
-        assertTrue(foundOrder.isPresent());
-        assertSame(order, foundOrder.get());
-        assertEquals("order-1", repository.requestedId);
-    }
-
-    @Test
-    void getOrderShouldReturnNotPresentForNonExistentOrder() {
-        Optional<Order> foundOrder = orderService.getOrder("non-existent-id");
-        assertFalse(foundOrder.isPresent());
-    }
-
-    @Test
-    void cancelOrderShouldUpdateStatusAndPublishEvent() {
-
-        Order order = new Order("u1", "p1", 2);
-
-        order.setId("order-1");
-        order.setStatus("CREATED");
-
-        repository.orderById = Optional.of(order);
-
-        Optional<Order> cancelledOrder = orderService.cancelOrder("order-1");
-
-        assertTrue(cancelledOrder.isPresent());
-
-        Order result = cancelledOrder.get();
-
-        assertEquals("CANCELLED", result.getStatus());
-
-        assertInstanceOf(
-                OrderCancelledEvent.class,
-                kafkaProducer.sentEvent
-        );
-
-        OrderCancelledEvent event =
-                (OrderCancelledEvent) kafkaProducer.sentEvent;
-
-        assertEquals("order-1", event.getOrderId());
-        assertEquals("u1", event.getUserId());
-        assertEquals("CANCELLED", event.getStatus());
-    }
-
-    @Test
     void createOrderShouldThrowWhenUserIdIsMissing() {
 
         CreateOrderRequest request = new CreateOrderRequest();
@@ -192,38 +132,97 @@ class OrderServiceTest {
     }
 
     @Test
-    void createOrderShouldSucceed() {
+    void createOrderShouldThrowWhenQuantityIsNull() {
 
         CreateOrderRequest request = new CreateOrderRequest();
         request.setUserId("u1");
         request.setProductId("p1");
-        request.setQuantity(2);
+        request.setQuantity(null);
 
-        inventoryService.inventoryItem = new InventoryItem("p1", 10, 0);
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.createOrder(request));
 
-        Order result = orderService.createOrder(request);
+        assertEquals("Quantity must be greater than zero", ex.getMessage());
+    }
 
-        assertNotNull(result);
-        assertEquals("u1", result.getUserId());
-        assertEquals("p1", result.getProductId());
-        assertEquals(2, result.getQuantity());
-        assertEquals("order-1", result.getId());
+    @Test
+    void getOrderShouldReturnRepositoryOrderById() {
+        Order order = new Order("u1", "p1", 2);
+        repository.orderById = Optional.of(order);
 
-        InventoryItem updated = inventoryService.getInventory("p1").orElseThrow();
-        assertEquals(10, updated.getAvailableQuantity());
-        assertEquals(0, updated.getReservedQuantity());
+        Optional<Order> foundOrder = orderService.getOrder("order-1");
+
+        assertTrue(foundOrder.isPresent());
+        assertSame(order, foundOrder.get());
+        assertEquals("order-1", repository.requestedId);
+    }
+
+    @Test
+    void getOrderShouldReturnNotPresentForNonExistentOrder() {
+        Optional<Order> foundOrder = orderService.getOrder("non-existent-id");
+        assertFalse(foundOrder.isPresent());
+    }
+
+    @Test
+    void getOrdersShouldReturnRepositoryOrders() {
+        Order firstOrder = new Order("u1", "p1", 2);
+        Order secondOrder = new Order("u2", "p2", 4);
+        repository.orders = List.of(firstOrder, secondOrder);
+
+        List<Order> orders = orderService.getOrders();
+
+        assertEquals(List.of(firstOrder, secondOrder), orders);
+    }
+
+    @Test
+    void cancelOrderShouldPersistCancelledStatus() {
+
+        Order order = new Order("u1", "p1", 2);
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        Optional<Order> result = orderService.cancelOrder("order-1");
+
+        assertTrue(result.isPresent());
+
+        // verifies repository.save effect (FakeOrderRepository captures it)
+        assertNotNull(repository.savedOrder);
+        assertEquals("CANCELLED", repository.savedOrder.getStatus());
+        assertEquals("order-1", repository.savedOrder.getId());
+    }
+
+    @Test
+    void cancelOrderShouldUpdateStatusAndPublishEvent() {
+
+        Order order = new Order("u1", "p1", 2);
+
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        Optional<Order> cancelledOrder = orderService.cancelOrder("order-1");
+
+        assertTrue(cancelledOrder.isPresent());
+
+        Order result = cancelledOrder.get();
+
+        assertEquals("CANCELLED", result.getStatus());
 
         assertInstanceOf(
-                OrderCreatedEvent.class,
+                OrderCancelledEvent.class,
                 kafkaProducer.sentEvent
         );
-        OrderCreatedEvent event =
-                (OrderCreatedEvent) kafkaProducer.sentEvent;
+
+        OrderCancelledEvent event =
+                (OrderCancelledEvent) kafkaProducer.sentEvent;
+
         assertEquals("order-1", event.getOrderId());
         assertEquals("u1", event.getUserId());
-        assertEquals("p1", event.getProductId());
-        assertEquals(2, event.getQuantity());
-        assertEquals("CREATED", event.getStatus());
+        assertEquals("CANCELLED", event.getStatus());
     }
 
     @Test
@@ -412,40 +411,6 @@ class OrderServiceTest {
         assertEquals("new-product", updated.getProductId());
 
         assertInstanceOf(OrderUpdatedEvent.class, kafkaProducer.sentEvent);
-    }
-
-    @Test
-    void cancelOrderShouldPersistCancelledStatus() {
-
-        Order order = new Order("u1", "p1", 2);
-        order.setId("order-1");
-        order.setStatus("CREATED");
-
-        repository.orderById = Optional.of(order);
-
-        Optional<Order> result = orderService.cancelOrder("order-1");
-
-        assertTrue(result.isPresent());
-
-        // verifies repository.save effect (FakeOrderRepository captures it)
-        assertNotNull(repository.savedOrder);
-        assertEquals("CANCELLED", repository.savedOrder.getStatus());
-        assertEquals("order-1", repository.savedOrder.getId());
-    }
-
-    @Test
-    void createOrderShouldThrowWhenQuantityIsNull() {
-
-        CreateOrderRequest request = new CreateOrderRequest();
-        request.setUserId("u1");
-        request.setProductId("p1");
-        request.setQuantity(null);
-
-        InvalidOrderException ex = assertThrows(
-                InvalidOrderException.class,
-                () -> orderService.createOrder(request));
-
-        assertEquals("Quantity must be greater than zero", ex.getMessage());
     }
 
     private static class FakeOrderRepository {

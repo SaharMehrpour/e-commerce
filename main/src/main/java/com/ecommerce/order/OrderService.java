@@ -102,6 +102,7 @@ public class OrderService {
                 key = "'all'"
         )
     )
+    @Transactional
     public Optional<Order> cancelOrder(String id) {
 
         Order order = repository.findById(id)
@@ -112,6 +113,11 @@ public class OrderService {
         if ("CANCELLED".equals(order.getStatus())) {
             throw new OrderAlreadyCancelledException("Order is already cancelled");
         }
+
+        InventoryRequest inventoryRequest = new InventoryRequest();
+        inventoryRequest.setProductId(order.getProductId());
+        inventoryRequest.setQuantity(order.getQuantity());
+        inventoryService.releaseStock(inventoryRequest);
 
         order.setStatus("CANCELLED");
 

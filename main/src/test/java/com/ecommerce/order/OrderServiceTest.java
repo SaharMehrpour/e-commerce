@@ -182,36 +182,21 @@ class OrderServiceTest {
         order.setId("order-1");
         order.setStatus("CREATED");
 
-        repository.orderById = Optional.of(order);
-
-        Optional<Order> result = orderService.cancelOrder("order-1");
-
-        assertTrue(result.isPresent());
-
-        // verifies repository.save effect (FakeOrderRepository captures it)
-        assertNotNull(repository.savedOrder);
-        assertEquals("CANCELLED", repository.savedOrder.getStatus());
-        assertEquals("order-1", repository.savedOrder.getId());
-    }
-
-    @Test
-    void cancelOrderShouldUpdateStatusAndPublishEvent() {
-
-        Order order = new Order("u1", "p1", 2);
-
-        order.setId("order-1");
-        order.setStatus("CREATED");
+        inventoryService.inventoryItem = new InventoryItem("p1", 10, 2);
 
         repository.orderById = Optional.of(order);
 
         Optional<Order> cancelledOrder = orderService.cancelOrder("order-1");
 
         assertTrue(cancelledOrder.isPresent());
+        assertNotNull(repository.savedOrder);
+        assertEquals("CANCELLED", repository.savedOrder.getStatus());
+        assertEquals("order-1", repository.savedOrder.getId());
 
+        assertTrue(cancelledOrder.isPresent());
         Order result = cancelledOrder.get();
 
         assertEquals("CANCELLED", result.getStatus());
-
         assertInstanceOf(
                 OrderCancelledEvent.class,
                 kafkaProducer.sentEvent
@@ -491,6 +476,14 @@ class OrderServiceTest {
             }
             if (shouldThrowNotEnough) {
                 throw new InventoryNotEnoughException("Insufficient stock for product " + request.getProductId());
+            }
+            return Optional.of(new InventoryItem());
+        }
+
+        @Override
+        public Optional<InventoryItem> releaseStock(InventoryRequest request) {
+            if (inventoryItem == null || !inventoryItem.getProductId().equals(request.getProductId())) {
+                throw new InventoryNotFoundException("Inventory item not found for product " + request.getProductId());
             }
             return Optional.of(new InventoryItem());
         }

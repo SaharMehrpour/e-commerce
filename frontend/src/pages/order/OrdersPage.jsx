@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getOrders } from "../api/orders";
+import { getOrders } from "../../api/orders";
 import { getOrdersPageCache, setOrdersPageCache } from "./ordersPageCache";
 
 function OrdersPage() {

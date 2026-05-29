@@ -62,6 +62,8 @@ Future microservices (Payment, Inventory, Shipping)
 - Deduct stock (on confirmed order)
 - Restore stock (on cancellation)
 - Check availability
+- Update stock
+- View the inventory
 
 ### Event-Driven Messaging
 - `OrderCreatedEvent`
@@ -81,15 +83,19 @@ Future microservices (Payment, Inventory, Shipping)
 
 ## 🧪 Testing
 
-The backend uses:
+### Backend
 - JUnit 5
 - Custom fake repository
 - Fake Kafka producer
 - Pure unit tests (no Spring context required)
 
-### Run tests
 ```bash
-./mvnw test
+./mvnw clean test
+```
+
+### Frontend
+```bash
+npm run test
 ```
 
 ## 🐳 Running the Project
@@ -103,7 +109,7 @@ Instead of running services manually, you can use the provided scripts.
 
 This script will:
 
-- Start all infrastructure services using Docker Compose:
+- Start all infrastructure services using Docker Compose (`docker-compose up -d`):
     - Kafka
     - ZooKeeper
     - MongoDB
@@ -133,31 +139,37 @@ This script will:
 - Stop the frontend development server (if running in background)
 
 ## 📡 API Endpoints
+Orders:
 - Create Order `POST /orders`
 - Get All Orders `GET /orders`
 - Get Order by ID `GET /orders/{id}`
 - Cancel Order `PATCH /orders/{id}/cancel`
 
+Inventory:
+- Stock product `PATCH /inventory/add`
+- Reserve stock `PATCH /inventory/reserve`
+- Deduct stock `PATCH /inventory/deduct`
+- Restore stock `PATCH /inventory/release`
+- Check availability `GET /inventory/{product_id}`
+- Update stock  `PATCH /inventory/{product_id}`
+- Get inventory `GET /inventory`
+
 
 ## 🧠 Key Design Decisions
 
-### Event-Driven Architecture
-
+***Event-Driven Architecture:***
 Orders emit events instead of directly triggering downstream logic.
 
-### Redis Cache
-
+***Redis Cache:***
 Used to improve read performance for frequently accessed orders.
 
-### MongoDB
-
+***MongoDB:***
 Acts as the source of truth for order data.
 
-### PostgreSQL
+***PostgreSQL:***
+A Relational database acts as the source of truth for inventory data.
 
-Acts as the source of truth for inventory data.
-
-### Separation of Concerns
+***Separation of Concerns:***
 - Controller → HTTP layer
 - Service → business logic
 - Kafka Producer → event publishing
@@ -171,15 +183,6 @@ Acts as the source of truth for inventory data.
 - API Gateway
 - Authentication (JWT / OAuth2)
 - Distributed tracing
-
-## 👨‍💻 Author
-
-Built as a learning project for mastering:
-
-- Microservices
-- Kafka event-driven systems
-- Full-stack architecture
-- Spring Boot backend engineering
 
 ## Acknowledgements
 

@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createOrder } from "../api/orders";
+import { createOrder } from "../../api/orders";
 import CreateOrderPage from "./CreateOrderPage";
-import { firstOrder } from "../test/testOrders";
+import { firstOrder } from "../../test/testOrders";
 
-vi.mock("../api/orders", () => ({
+vi.mock("../../api/orders", () => ({
   createOrder: vi.fn(),
 }));
 

@@ -53,24 +53,6 @@ function InventoryDetailsPage() {
     }
   }
 
-  async function handleCancel() {
-    try {
-      setIsLoading(true);
-
-      const data = await cancelInventoryItemById(inventoryItemId.trim());
-
-      setInventoryItem(data);
-      setValidatedInventoryItem(null);
-      setInventoryItemFields(null);
-      setIsEditing(false);
-    } catch (err) {
-      console.error("Failed to cancel inventory item", { err });
-      setError("Failed to cancel the inventory item.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   function handleChange(field, value) {
     setInventoryItemFields((prev) => ({
       ...(prev || inventoryItem),
@@ -121,7 +103,7 @@ function InventoryDetailsPage() {
     return (
       <div className="binventoryItem rounded p-2 mb-3 bg-light">
         <div className="inventoryItem-field-label mb-1">
-          inventory item ID
+          Inventory Item ID
         </div>
 
         <div

@@ -62,6 +62,8 @@ Future microservices (Payment, Inventory, Shipping)
 - Deduct stock (on confirmed order)
 - Restore stock (on cancellation)
 - Check availability
+- Update stock
+- View the inventory
 
 ### Event-Driven Messaging
 - `OrderCreatedEvent`
@@ -138,11 +140,13 @@ This script will:
 - Get Order by ID `GET /orders/{id}`
 - Cancel Order `PATCH /orders/{id}/cancel`
 
-- Stock product `POST /inventory/add`
-- Reserve stock `POST /inventory/reserve`
-- Deduct stock `POST /inventory/deduct`
-- Restore stock `POST /inventory/release`
-- Check availability `POST /inventory/{product_id}`
+- Stock product `PATCH /inventory/add`
+- Reserve stock `PATCH /inventory/reserve`
+- Deduct stock `PATCH /inventory/deduct`
+- Restore stock `PATCH /inventory/release`
+- Check availability `GET /inventory/{product_id}`
+- Update stock  `PATCH /inventory/{product_id}`
+- Get inventory `GET /inventory`
 
 
 ## 🧠 Key Design Decisions

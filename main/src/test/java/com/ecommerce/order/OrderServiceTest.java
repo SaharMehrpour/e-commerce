@@ -529,16 +529,6 @@ class OrderServiceTest {
         }
 
         @Override
-        public Optional<InventoryItem> updateInventory(InventoryRequest request) {
-            if ((inventoryItem == null && inventoryItem2 == null) || 
-                (!inventoryItem.getProductId().equals(request.getProductId()) 
-                    && !inventoryItem2.getProductId().equals(request.getProductId()))) {
-                throw new InventoryNotFoundException("Inventory item not found for product " + request.getProductId());
-            }
-            return Optional.of(new InventoryItem());
-        }
-
-        @Override
         public Optional<InventoryItem> getInventory(String productId) {
             if ((inventoryItem == null && inventoryItem2 == null) || 
                 (!inventoryItem.getProductId().equals(productId) 

@@ -110,29 +110,6 @@ public class InventoryService {
         return inventoryRepository.findByProductId(productId);
     }
 
-    @Caching(
-        put = @CachePut(value = "inventory", key = "#request.productId"),
-        evict = @CacheEvict(value = "inventoryList", allEntries = true)
-    )
-    @Transactional
-    public Optional<InventoryItem> updateInventory(InventoryRequest request) {
-        String productId = request.getProductId();
-        InventoryItem item = inventoryRepository.findByProductId(productId)
-                .orElseThrow(() -> 
-                    new InventoryNotFoundException("Inventory item not found for product " + productId)
-                );
-
-        if (request.getAvailableQuantity() != null) {
-            item.setAvailableQuantity(request.getAvailableQuantity());
-        }
-        if (request.getReservedQuantity() != null) {
-            item.setReservedQuantity(request.getReservedQuantity());
-        }
-
-        inventoryRepository.save(item);
-        return Optional.of(item);
-    }
-
     @Cacheable(value = "inventoryList")
     public List<InventoryItem> getAllInventory() {
         return inventoryRepository.findAll();

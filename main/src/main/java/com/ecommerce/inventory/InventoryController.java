@@ -58,13 +58,6 @@ public class InventoryController {
             .orElse(ResponseEntity.notFound().build());
     }
 
-    @PatchMapping("/update")
-    public ResponseEntity<InventoryItem> updateInventory(@RequestBody InventoryRequest request) {
-        return inventoryService.updateInventory(request)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
-    }
-
     @GetMapping
     public List<InventoryItem> getAllInventory() {
         return inventoryService.getAllInventory();

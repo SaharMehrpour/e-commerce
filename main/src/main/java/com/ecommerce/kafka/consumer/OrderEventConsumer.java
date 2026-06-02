@@ -4,6 +4,7 @@ import com.ecommerce.dto.InventoryRequest;
 import com.ecommerce.event.Event;
 import com.ecommerce.event.OrderCreatedEvent;
 import com.ecommerce.event.OrderCancelledEvent;
+import com.ecommerce.event.OrderUpdatedEvent;
 import com.ecommerce.inventory.InventoryService;
 
 import org.springframework.kafka.annotation.KafkaListener;
@@ -52,6 +53,27 @@ public class OrderEventConsumer {
     )
     public void handleOrderUpdated(Event event) {
         System.out.println("🔄 Order UPDATED received: " + event);
-        System.out.println("Type of event: " + event.getClass().getName());
+
+        OrderUpdatedEvent orderUpdatedEvent = (OrderUpdatedEvent) event;
+
+        if (!orderUpdatedEvent.getOldProductId()
+                .equals(orderUpdatedEvent.getNewProductId())) {
+
+            InventoryRequest releaseRequest = new InventoryRequest();
+            releaseRequest.setProductId(orderUpdatedEvent.getOldProductId());
+            releaseRequest.setQuantity(orderUpdatedEvent.getOldQuantity());
+            inventoryService.releaseStock(releaseRequest);
+
+            InventoryRequest reserveRequest = new InventoryRequest();
+            reserveRequest.setProductId(orderUpdatedEvent.getNewProductId());
+            reserveRequest.setQuantity(orderUpdatedEvent.getNewQuantity());          
+            inventoryService.reserveStock(reserveRequest);
+            return;
+        }
+
+        InventoryRequest request = new InventoryRequest();
+        request.setProductId(orderUpdatedEvent.getNewProductId());
+        request.setQuantity(orderUpdatedEvent.getNewQuantity());
+        inventoryService.reserveStock(request);
     }
 }

@@ -84,4 +84,37 @@ class GlobalExceptionHandlerTest {
         assertEquals("Cannot update order", body.get("message"));
         assertNotNull(body.get("timestamp"));
     }
+
+    @Test
+    void shouldHandleInventoryNotFoundException() {
+        InventoryNotFoundException ex =
+                new InventoryNotFoundException("Inventory not found");
+
+        ResponseEntity<?> response =
+                handler.handleInventoryNotFoundException(ex);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+
+        assertEquals("Inventory Not Found", body.get("error"));
+        assertEquals("Inventory not found", body.get("message"));
+        assertNotNull(body.get("timestamp"));
+    }
+
+    @Test
+    void shouldHandleInventoryNotEnoughException() {
+        InventoryNotEnoughException ex = new InventoryNotEnoughException("Not enough inventory");
+        
+        ResponseEntity<?> response =
+                handler.handleInventoryNotEnoughException(ex);
+        
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
+        
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+        
+        assertEquals("Insufficient Stock", body.get("error"));
+        assertEquals("Not enough inventory", body.get("message"));
+        assertNotNull(body.get("timestamp"));
+    }
 }

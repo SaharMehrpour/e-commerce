@@ -66,4 +66,31 @@ public class GlobalExceptionHandler {
                 )
         );
     }
+
+    @ExceptionHandler(InventoryNotFoundException.class)
+    public ResponseEntity<?> handleInventoryNotFoundException(
+            InventoryNotFoundException ex
+    ) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "Inventory Not Found",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+
+    @ExceptionHandler(InventoryNotEnoughException.class)
+    public ResponseEntity<?> handleInventoryNotEnoughException(
+            InventoryNotEnoughException ex
+    ) {
+        // HTTP 422 Unprocessable Entity is perfect for business rule violations like insufficient stock
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "Insufficient Stock",
+                        "message", ex.getMessage()
+                )
+        );
+    }
 }

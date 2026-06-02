@@ -5,14 +5,7 @@ public class InventoryResponse {
     private Integer availableQuantity;
     private Integer reservedQuantity;
 
-    public InventoryResponse() {
-    }
-
-    public InventoryResponse(String productId, Integer availableQuantity, Integer reservedQuantity) {
-        this.productId = productId;
-        this.availableQuantity = availableQuantity;
-        this.reservedQuantity = reservedQuantity;
-    }
+    public InventoryResponse() {}
 
     public String getProductId() {
         return productId;

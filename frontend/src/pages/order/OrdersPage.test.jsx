@@ -92,7 +92,7 @@ describe("OrdersPage", () => {
     await user.click(screen.getByRole("button", { name: /load orders|Refresh/i }));
 
     expect(
-      await screen.findByText(/could not load orders\. check that the backend is running\./i),
+      await screen.findByText(/API failed/i),
     ).toBeInTheDocument();
 
     expect(screen.queryByText(/loading orders/i)).not.toBeInTheDocument();

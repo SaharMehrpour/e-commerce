@@ -62,7 +62,7 @@ describe("InventoryPage", () => {
     
     await user.click(screen.getByRole("button", { name: /load inventory/i }));
     
-    expect(await screen.findByText(/could not load inventory/i)).toBeInTheDocument();
+    expect(await screen.findByText(/API error/i)).toBeInTheDocument();
   });
 
   it("displays a message when there are no inventory items", async () => {

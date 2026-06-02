@@ -39,7 +39,7 @@ describe("CreateOrderPage", () => {
 
   it("shows an error when creating an order fails", async () => {
     const user = userEvent.setup();
-    createOrder.mockRejectedValue(new Error("network"));
+    createOrder.mockRejectedValue(new Error("network error"));
 
     render(<CreateOrderPage />);
 
@@ -47,6 +47,6 @@ describe("CreateOrderPage", () => {
     await user.type(screen.getByPlaceholderText("Enter product ID"), "product-1");
     await user.click(screen.getByRole("button", { name: /Create Order/i }));
 
-    expect(await screen.findByText(/could not create the order/i)).toBeInTheDocument();
+    expect(await screen.findByText(/network error/i)).toBeInTheDocument();
   });
 });

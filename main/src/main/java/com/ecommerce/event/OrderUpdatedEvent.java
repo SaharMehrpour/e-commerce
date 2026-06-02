@@ -6,16 +6,20 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class OrderUpdatedEvent extends Event {
-
+    
     private String orderId;
-    private String productId;
-    private int quantity;
+    private String oldProductId;
+    private Integer oldQuantity;
+    private String newProductId;
+    private Integer newQuantity;
 
     public OrderUpdatedEvent(
-            String eventId,
-            String orderId,
-            String productId,
-            int quantity
+        String eventId,
+        String orderId,
+        String oldProductId,
+        Integer oldQuantity,
+        String newProductId,
+        Integer newQuantity
     ) {
         super(
                 eventId,
@@ -24,19 +28,29 @@ public class OrderUpdatedEvent extends Event {
         );
 
         this.orderId = orderId;
-        this.productId = productId;
-        this.quantity = quantity;
+        this.oldProductId = oldProductId;
+        this.oldQuantity = oldQuantity;
+        this.newProductId = newProductId;
+        this.newQuantity = newQuantity;
     }
 
     public String getOrderId() {
         return orderId;
     }
 
-    public String getProductId() {
-        return productId;
+    public String getOldProductId() {
+        return oldProductId;
     }
 
-    public int getQuantity() {
-        return quantity;
+    public Integer getOldQuantity() {
+        return oldQuantity;
+    }
+
+    public String getNewProductId() {
+        return newProductId;
+    }
+
+    public Integer getNewQuantity() {
+        return newQuantity;
     }
 }

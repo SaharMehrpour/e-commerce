@@ -51,3 +51,7 @@ app:
       order-created: order-created
       order-cancelled: order-cancelled
       order-updated: order-updated
+
+inventory:
+  service:
+    url: http://localhost:8080/inventory

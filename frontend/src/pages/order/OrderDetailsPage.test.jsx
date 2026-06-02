@@ -38,12 +38,10 @@ describe("OrderDetailsPage", () => {
     expect(screen.getByText("product-1")).toBeInTheDocument();
   });
 
-  it("shows 'not found' error when order does not exist (404)", async () => {
+  it("shows an error when request fails", async () => {
     const user = userEvent.setup();
 
-    getOrderById.mockRejectedValue(
-      Object.assign(new Error("Not Found"), { status: 404 })
-    );
+    getOrderById.mockRejectedValue(new Error("Error happened"));
 
     render(<OrderDetailsPage />);
 
@@ -54,27 +52,7 @@ describe("OrderDetailsPage", () => {
     await user.click(screen.getByRole("button", { name: /get order/i }));
 
     expect(
-      await screen.findByText(/no order found for that id/i)
-    ).toBeInTheDocument();
-  });
-
-  it("shows backend error when request fails due to server issue", async () => {
-    const user = userEvent.setup();
-
-    getOrderById.mockRejectedValue(new Error("Network Error"));
-
-    render(<OrderDetailsPage />);
-
-    await user.type(
-      screen.getByPlaceholderText(/enter order id/i),
-      "order-1"
-    );
-    await user.click(screen.getByRole("button", { name: /get order/i }));
-
-    expect(
-      await screen.findByText(
-        /backend is not reachable\. please try again later\./i
-      )
+      await screen.findByText(/Error happened/i)
     ).toBeInTheDocument();
   });
 
@@ -199,18 +177,14 @@ describe("OrderDetailsPage", () => {
       await screen.findByRole("button", { name: /cancel order/i })
     );
 
-    expect(
-      await screen.findByText(/failed to cancel the order\./i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/cancel failed/i)).toBeInTheDocument();
   });
 
   it("clears the previous error after a successful search", async () => {
     const user = userEvent.setup();
 
     getOrderById
-      .mockRejectedValueOnce(
-        Object.assign(new Error("Not Found"), { status: 404 })
-      )
+      .mockRejectedValueOnce(new Error("Not Found"))
       .mockResolvedValueOnce(firstOrder);
 
     render(<OrderDetailsPage />);
@@ -221,7 +195,7 @@ describe("OrderDetailsPage", () => {
     await user.click(screen.getByRole("button", { name: /get order/i }));
 
     expect(
-      await screen.findByText(/no order found for that id/i)
+      await screen.findByText(/Not Found/i)
     ).toBeInTheDocument();
 
     await user.clear(input);
@@ -229,7 +203,7 @@ describe("OrderDetailsPage", () => {
     await user.click(screen.getByRole("button", { name: /get order/i }));
 
     expect(
-      screen.queryByText(/no order found for that id/i)
+      screen.queryByText(/Not Found/i)
     ).not.toBeInTheDocument();
 
     expect(await screen.findByText(/order details/i)).toBeInTheDocument();
@@ -329,10 +303,6 @@ describe("OrderDetailsPage", () => {
     getOrderById.mockResolvedValue(firstOrder);
     updateOrder.mockRejectedValue(new Error("update failed"));
 
-    const consoleSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-
     render(<OrderDetailsPage />);
 
     await user.type(
@@ -353,10 +323,7 @@ describe("OrderDetailsPage", () => {
       screen.getByRole("button", { name: /save changes/i })
     );
 
-    expect(await screen.findByText(/failed to update the order/i)).toBeInTheDocument();
-    expect(consoleSpy).toHaveBeenCalled();
-
-    consoleSpy.mockRestore();
+    expect(await screen.findByText(/update failed/i)).toBeInTheDocument();
   });
 
   it("covers handleChange delete branch when value equals original order field", async () => {

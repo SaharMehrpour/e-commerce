@@ -18,8 +18,8 @@ function InventoryPage() {
       const data = await getInventory();
       setInventoryPageCache(data);
       setInventory(data);
-    } catch {
-      setError("Could not load inventory. Check that the backend is running.");
+    } catch (error) {
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }

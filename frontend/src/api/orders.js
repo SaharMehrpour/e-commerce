@@ -10,26 +10,22 @@ export async function createOrder(order) {
         body: JSON.stringify(order)
     });
 
+    await processError(response);
+
     return response.json();
 }
 
 export async function getOrders() {
 
     const response = await fetch(BASE_URL);
-
+    await processError(response);
     return response.json();
 }
 
 export async function getOrderById(id) {
 
     const response = await fetch(`${BASE_URL}/${id}`);
-
-    if (!response.ok) {
-        const error = new Error("Request failed");
-        error.status = response.status;
-        throw error;
-    }
-
+    await processError(response);
     return response.json();
 }
 
@@ -43,20 +39,23 @@ export async function updateOrder(id, updatedOrder) {
         body: JSON.stringify(updatedOrder)
     });
 
-    if (!response.ok) {
-        throw new Error("Order not found");
-    }
-
+    await processError(response);
     return response.json();
 }
 
 export async function cancelOrderById(id) {
 
     const response = await fetch(`${BASE_URL}/${id}/cancel`, { method: "PATCH" });
-
-    if (!response.ok) {
-        throw new Error("Order not found");
-    }
-
+    await processError(response);
     return response.json();
+}
+
+async function processError(response) {
+    if (!response.ok) {
+        const errorData = await response.json();
+        const error = new Error(errorData.message || "Request failed");
+        error.status = response.status;
+
+        throw error;
+    }
 }

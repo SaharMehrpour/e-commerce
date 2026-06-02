@@ -56,6 +56,8 @@ class OrderKafkaProducerTest {
                 "event-2",
                 "order-1",
                 "u1",
+                "p1",
+                2,
                 "CANCELLED"
         );
 
@@ -74,6 +76,8 @@ class OrderKafkaProducerTest {
                 "event-3",
                 "order-1",
                 "p1",
+                2,
+                "updated-product",
                 3
         );
 

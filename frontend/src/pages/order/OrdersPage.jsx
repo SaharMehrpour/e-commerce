@@ -18,8 +18,8 @@ function OrdersPage() {
       const data = await getOrders();
       setOrdersPageCache(data);
       setOrders(data);
-    } catch {
-      setError("Could not load orders. Check that the backend is running.");
+    } catch (error) {
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }

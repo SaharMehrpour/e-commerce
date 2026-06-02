@@ -32,8 +32,8 @@ function CreateOrderPage() {
       const data = await createOrder(order);
       setCreatedOrder(data);
       setOrder(initialOrder);
-    } catch {
-      setError("Could not create the order. Check that the backend is running.");
+    } catch (error) {
+      setError(error.message);
     } finally {
       setIsSubmitting(false);
     }

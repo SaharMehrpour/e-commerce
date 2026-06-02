@@ -251,9 +251,11 @@ class OrderServiceTest {
     void updateOrderShouldUpdateFields() {
 
         Order order = new Order("u1", "p1", 2);
-
         order.setId("order-1");
         order.setStatus("CREATED");
+
+        inventoryService.inventoryItem = new InventoryItem("p1", 10, 2);
+        inventoryService.inventoryItem2 = new InventoryItem("updated-product", 0, 0);
 
         repository.orderById = Optional.of(order);
 
@@ -336,7 +338,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void updateOrderShouldReturnEmptyWhenOrderNotFound() {
+    void updateOrderShouldThrowNotFoundExceptionWhenOrderNotFound() {
 
         repository.orderById = Optional.empty();
 
@@ -344,10 +346,38 @@ class OrderServiceTest {
         request.setQuantity(5);
         request.setProductId("p1");
 
-        Optional<Order> result = orderService.updateOrder("missing-id", request);
+        OrderNotFoundException ex = assertThrows(
+                OrderNotFoundException.class,
+                () -> orderService.updateOrder("missing-id", request)
+        );
 
-        assertFalse(result.isPresent());
-        assertNull(kafkaProducer.sentEvent);
+        assertEquals(
+                "Order not found with id: missing-id",
+                ex.getMessage()
+        );
+    }
+
+    @Test
+    void updateOrderShouldThrowWhenNeitherFieldProvided() {
+        Order order = new Order("u1", "p1", 2);
+        order.setId("order-1");
+        order.setStatus("CREATED");
+
+        repository.orderById = Optional.of(order);
+
+        UpdateOrderRequest request = new UpdateOrderRequest();
+        request.setQuantity(null);
+        request.setProductId(null);
+
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.updateOrder("order-1", request)
+        );
+
+        assertEquals(
+                "At least one field (productId or quantity) must be provided for update",
+                ex.getMessage()
+        );
     }
 
     @Test
@@ -356,6 +386,8 @@ class OrderServiceTest {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
         order.setStatus("CREATED");
+
+        inventoryService.inventoryItem = new InventoryItem("p1", 10, 2);
 
         repository.orderById = Optional.of(order);
 
@@ -380,6 +412,9 @@ class OrderServiceTest {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
         order.setStatus("CREATED");
+
+        inventoryService.inventoryItem = new InventoryItem("p1", 10, 2);
+        inventoryService.inventoryItem2 = new InventoryItem("new-product", 2, 0);
 
         repository.orderById = Optional.of(order);
 
@@ -463,6 +498,7 @@ class OrderServiceTest {
 
     private static class FakeInventoryService extends InventoryService {
         private InventoryItem inventoryItem = null;
+        private InventoryItem inventoryItem2 = null;        
         private boolean shouldThrowNotEnough = false;
 
         private FakeInventoryService() {
@@ -471,7 +507,9 @@ class OrderServiceTest {
 
         @Override
         public Optional<InventoryItem> reserveStock(InventoryRequest request) {
-            if (inventoryItem == null || !inventoryItem.getProductId().equals(request.getProductId())) {
+            if ((inventoryItem == null && inventoryItem2 == null) || 
+                (!inventoryItem.getProductId().equals(request.getProductId()) 
+                    && !inventoryItem2.getProductId().equals(request.getProductId()))) {
                 throw new InventoryNotFoundException("Inventory item not found for product " + request.getProductId());
             }
             if (shouldThrowNotEnough) {
@@ -482,7 +520,19 @@ class OrderServiceTest {
 
         @Override
         public Optional<InventoryItem> releaseStock(InventoryRequest request) {
-            if (inventoryItem == null || !inventoryItem.getProductId().equals(request.getProductId())) {
+            if ((inventoryItem == null && inventoryItem2 == null) || 
+                (!inventoryItem.getProductId().equals(request.getProductId()) 
+                    && !inventoryItem2.getProductId().equals(request.getProductId()))) {
+                throw new InventoryNotFoundException("Inventory item not found for product " + request.getProductId());
+            }
+            return Optional.of(new InventoryItem());
+        }
+
+        @Override
+        public Optional<InventoryItem> updateInventory(InventoryRequest request) {
+            if ((inventoryItem == null && inventoryItem2 == null) || 
+                (!inventoryItem.getProductId().equals(request.getProductId()) 
+                    && !inventoryItem2.getProductId().equals(request.getProductId()))) {
                 throw new InventoryNotFoundException("Inventory item not found for product " + request.getProductId());
             }
             return Optional.of(new InventoryItem());
@@ -490,10 +540,13 @@ class OrderServiceTest {
 
         @Override
         public Optional<InventoryItem> getInventory(String productId) {
-            if (inventoryItem == null || !inventoryItem.getProductId().equals(productId)) {
+            if ((inventoryItem == null && inventoryItem2 == null) || 
+                (!inventoryItem.getProductId().equals(productId) 
+                    && !inventoryItem2.getProductId().equals(productId))) {
                 throw new InventoryNotFoundException("Inventory item not found for product " + productId);
             }
-            return Optional.of(inventoryItem);
+            return inventoryItem.getProductId().equals(productId) ? Optional.of(inventoryItem) 
+                : Optional.of(inventoryItem2);
         }
     }
 }

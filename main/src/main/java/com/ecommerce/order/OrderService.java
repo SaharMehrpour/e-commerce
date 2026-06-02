@@ -147,40 +147,64 @@ public class OrderService {
                 key = "'all'"
         )
     )
+    @Transactional
     public Optional<Order> updateOrder(String id, UpdateOrderRequest request) {
 
-        Optional<Order> optionalOrder = repository.findById(id);
+        Order order = repository.findById(id)
+                .orElseThrow(() ->
+                        new OrderNotFoundException("Order not found with id: " + id)
+                );
+        
+        if ("CANCELLED".equals(order.getStatus())) {
+            throw new OrderNotUpdatableException("Cannot update a cancelled order");
+        }
+        
+        String oldProductId = order.getProductId();
+        String newProductId = request.getProductId();
+        Integer oldQuantity = order.getQuantity();
+        Integer newQuantity = request.getQuantity();
 
-        optionalOrder.ifPresent(order -> {
+        if (newQuantity == null && newProductId == null) {
+            throw new InvalidOrderException("At least one field (productId or quantity) must be provided for update");
+        }
 
-            if ("CANCELLED".equals(order.getStatus())) {
-                throw new OrderNotUpdatableException("Cannot update a cancelled order");
-            }
+        if (newQuantity != null && newQuantity <= 0) {
+            throw new InvalidOrderException("Quantity must be greater than zero");
+        }
 
-            if (request.getQuantity() != null) {
-
-                if (request.getQuantity() <= 0) {
-                    throw new InvalidOrderException("Quantity must be greater than zero");
-                }
-
-                order.setQuantity(request.getQuantity());
-            }
-
-            if (request.getProductId() != null) {
-                order.setProductId(request.getProductId());
-            }
-
-            repository.save(order);
+        // release stock for old product if productId is being updated
+        if (newProductId != null) {
+            InventoryRequest releaseRequest = new InventoryRequest();
+            releaseRequest.setProductId(oldProductId);
+            releaseRequest.setQuantity(oldQuantity);
+            inventoryService.releaseStock(releaseRequest);
             
-            OrderUpdatedEvent event = new OrderUpdatedEvent(
-                    UUID.randomUUID().toString(),
-                    order.getId(),
-                    order.getProductId(),
-                    order.getQuantity()
-            );
-            kafkaProducer.sendOrderUpdatedEvent(event);
-        });
+            order.setProductId(newProductId);
+        }
 
-        return optionalOrder;
+        if (newProductId == null) {
+            newProductId = oldProductId;
+        }
+        if (newQuantity == null) {
+            newQuantity = oldQuantity;
+        }
+        InventoryRequest reserveRequest = new InventoryRequest();
+        reserveRequest.setProductId(newProductId);
+        reserveRequest.setQuantity(newQuantity);
+        inventoryService.reserveStock(reserveRequest);
+
+        order.setQuantity(newQuantity);
+
+        Order updatedOrder = repository.save(order);
+
+        OrderUpdatedEvent event = new OrderUpdatedEvent(
+                UUID.randomUUID().toString(),
+                updatedOrder.getId(),
+                updatedOrder.getProductId(),
+                updatedOrder.getQuantity());
+
+        kafkaProducer.sendOrderUpdatedEvent(event);
+
+        return Optional.of(updatedOrder);
     }
 }

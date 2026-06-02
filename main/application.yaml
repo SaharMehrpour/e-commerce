@@ -54,4 +54,4 @@ app:
 
 inventory:
   service:
-    url: http://localhost:8081/inventory
+    url: http://localhost:8080/inventory

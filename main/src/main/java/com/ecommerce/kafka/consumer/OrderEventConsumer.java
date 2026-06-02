@@ -3,6 +3,7 @@ package com.ecommerce.kafka.consumer;
 import com.ecommerce.dto.InventoryRequest;
 import com.ecommerce.event.Event;
 import com.ecommerce.event.OrderCreatedEvent;
+import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.inventory.InventoryService;
 
 import org.springframework.kafka.annotation.KafkaListener;
@@ -37,7 +38,12 @@ public class OrderEventConsumer {
     )
     public void handleOrderCancelled(Event event) {
         System.out.println("❌ Order CANCELLED received: " + event);
-        System.out.println("Type of event: " + event.getClass().getName());
+
+        InventoryRequest request = new InventoryRequest();
+        request.setProductId(((OrderCancelledEvent) event).getProductId());
+        request.setQuantity(((OrderCancelledEvent) event).getQuantity());
+
+        inventoryService.releaseStock(request);
     }
 
     @KafkaListener(

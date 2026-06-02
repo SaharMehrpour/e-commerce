@@ -133,10 +133,8 @@ public class OrderService {
             throw new OrderAlreadyCancelledException("Order is already cancelled");
         }
 
-        InventoryRequest inventoryRequest = new InventoryRequest();
-        inventoryRequest.setProductId(order.getProductId());
-        inventoryRequest.setQuantity(order.getQuantity());
-        inventoryService.releaseStock(inventoryRequest);
+        String productId = order.getProductId();
+        Integer quantity = order.getQuantity();
 
         order.setStatus("CANCELLED");
 
@@ -147,6 +145,8 @@ public class OrderService {
                         UUID.randomUUID().toString(),
                         updatedOrder.getId(),
                         updatedOrder.getUserId(),
+                        productId,
+                        quantity,
                         updatedOrder.getStatus()
                 );
 

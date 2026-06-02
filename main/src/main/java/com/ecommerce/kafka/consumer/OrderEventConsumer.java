@@ -1,11 +1,21 @@
 package com.ecommerce.kafka.consumer;
 
+import com.ecommerce.dto.InventoryRequest;
 import com.ecommerce.event.Event;
+import com.ecommerce.event.OrderCreatedEvent;
+import com.ecommerce.inventory.InventoryService;
+
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 @Service
 public class OrderEventConsumer {
+
+    private final InventoryService inventoryService;
+
+    public OrderEventConsumer(InventoryService inventoryService) {
+        this.inventoryService = inventoryService;
+    }
 
     @KafkaListener(
         topics = "${app.kafka.topics.order-created}",
@@ -13,7 +23,12 @@ public class OrderEventConsumer {
     )
     public void handleOrderCreated(Event event) {
         System.out.println("📦 Order CREATED received: (Event) " + event);
-        System.out.println("Type of event: " + event.getClass().getName());
+
+        InventoryRequest request = new InventoryRequest();
+        request.setProductId(((OrderCreatedEvent) event).getProductId());
+        request.setQuantity(((OrderCreatedEvent) event).getQuantity());
+
+        inventoryService.reserveStock(request);
     }
 
     @KafkaListener(

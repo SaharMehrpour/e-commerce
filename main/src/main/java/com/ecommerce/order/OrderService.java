@@ -1,19 +1,25 @@
 package com.ecommerce.order;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import com.ecommerce.dto.CreateOrderRequest;
 import com.ecommerce.dto.InventoryRequest;
+import com.ecommerce.dto.InventoryResponse;
 import com.ecommerce.dto.UpdateOrderRequest;
 import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderCreatedEvent;
 import com.ecommerce.event.OrderUpdatedEvent;
 import com.ecommerce.exception.InvalidOrderException;
+import com.ecommerce.exception.InventoryNotEnoughException;
+import com.ecommerce.exception.InventoryNotFoundException;
 import com.ecommerce.exception.OrderAlreadyCancelledException;
 import com.ecommerce.exception.OrderNotFoundException;
 import com.ecommerce.exception.OrderNotUpdatableException;
@@ -30,11 +36,17 @@ public class OrderService {
     private final OrderRepository repository;
     private final OrderKafkaProducer kafkaProducer;
     private final InventoryService inventoryService;
+    private final RestTemplate restTemplate;
 
-    public OrderService(OrderRepository repository, OrderKafkaProducer kafkaProducer, InventoryService inventoryService) {
+    @Value("${inventory.service.url}")
+    private String inventoryServiceUrl;
+
+    public OrderService(OrderRepository repository, OrderKafkaProducer kafkaProducer,
+        InventoryService inventoryService, RestTemplate restTemplate) {
         this.repository = repository;
         this.kafkaProducer = kafkaProducer;
         this.inventoryService = inventoryService;
+        this.restTemplate = restTemplate;
     }
 
     @Caching(
@@ -55,10 +67,17 @@ public class OrderService {
             throw new InvalidOrderException("Quantity must be greater than zero");
         }
 
-        InventoryRequest inventoryRequest = new InventoryRequest();
-        inventoryRequest.setProductId(request.getProductId());
-        inventoryRequest.setQuantity(request.getQuantity());
-        inventoryService.reserveStock(inventoryRequest);
+        InventoryResponse inventoryResponse = getInventory(request.getProductId()).orElseThrow(() ->
+                new InventoryNotFoundException(
+                        "Inventory item not found for product " + request.getProductId()
+                )
+        );
+
+        if (inventoryResponse.getAvailableQuantity() < request.getQuantity()) {
+            throw new InventoryNotEnoughException(
+                    "Insufficient stock for product " + request.getProductId()
+                );
+        }
 
         Order order = new Order();
         order.setUserId(request.getUserId());
@@ -206,5 +225,19 @@ public class OrderService {
         kafkaProducer.sendOrderUpdatedEvent(event);
 
         return Optional.of(updatedOrder);
+    }
+
+    public Optional<InventoryResponse> getInventory(String productId) {
+        try {
+            InventoryResponse response = restTemplate.getForObject(
+                    inventoryServiceUrl + "/" + productId,
+                    InventoryResponse.class
+            );
+            return Optional.ofNullable(response);
+        } catch (HttpClientErrorException.NotFound ex) {
+            throw new InventoryNotFoundException(
+                    "Inventory item not found for product " + productId
+            );
+        }
     }
 }

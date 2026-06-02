@@ -27,13 +27,8 @@ function OrderDetailsPage() {
       setIsLoading(true);
       const data = await getOrderById(orderId.trim());
       setOrder(data);
-    } catch (err) {
-      console.error("Failed to fetch order", { err });
-      setError(
-        err?.status === 404
-          ? "No order found for that ID."
-          : "Backend is not reachable. Please try again later."
-      );
+    } catch (error) {
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -48,9 +43,8 @@ function OrderDetailsPage() {
       setOrder(data);
       setOrderFields(null);
       setIsEditing(false);
-    } catch (err) {
-      console.error("Failed to update order", { err });
-      setError("Failed to update the order.");
+    } catch (error) {
+      setError(error.message);
     } finally {
       setValidatedOrder(null);
       setIsLoading(false);
@@ -67,9 +61,8 @@ function OrderDetailsPage() {
       setValidatedOrder(null);
       setOrderFields(null);
       setIsEditing(false);
-    } catch (err) {
-      console.error("Failed to cancel order", { err });
-      setError("Failed to cancel the order.");
+    } catch (error) {
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }

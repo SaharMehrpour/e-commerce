@@ -1,7 +1,6 @@
 package com.ecommerce.kafka.consumer;
 
 import com.ecommerce.dto.InventoryRequest;
-import com.ecommerce.event.Event;
 import com.ecommerce.event.OrderCreatedEvent;
 import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderUpdatedEvent;
@@ -23,12 +22,12 @@ public class OrderEventConsumer {
         topics = "${app.kafka.topics.order-created}",
         containerFactory = "orderCreatedKafkaListenerFactory"
     )
-    public void handleOrderCreated(Event event) {
+    public void handleOrderCreated(OrderCreatedEvent event) {
         System.out.println("📦 Order CREATED received: (Event) " + event);
 
         InventoryRequest request = new InventoryRequest();
-        request.setProductId(((OrderCreatedEvent) event).getProductId());
-        request.setQuantity(((OrderCreatedEvent) event).getQuantity());
+        request.setProductId(event.getProductId());
+        request.setQuantity(event.getQuantity());
 
         inventoryService.reserveStock(request);
     }
@@ -37,12 +36,12 @@ public class OrderEventConsumer {
         topics = "${app.kafka.topics.order-cancelled}",
         containerFactory = "orderCancelledKafkaListenerFactory"
     )
-    public void handleOrderCancelled(Event event) {
+    public void handleOrderCancelled(OrderCancelledEvent event) {
         System.out.println("❌ Order CANCELLED received: " + event);
 
         InventoryRequest request = new InventoryRequest();
-        request.setProductId(((OrderCancelledEvent) event).getProductId());
-        request.setQuantity(((OrderCancelledEvent) event).getQuantity());
+        request.setProductId(event.getProductId());
+        request.setQuantity(event.getQuantity());
 
         inventoryService.releaseStock(request);
     }
@@ -51,29 +50,27 @@ public class OrderEventConsumer {
         topics = "${app.kafka.topics.order-updated}",
         containerFactory = "orderUpdatedKafkaListenerFactory"
     )
-    public void handleOrderUpdated(Event event) {
+    public void handleOrderUpdated(OrderUpdatedEvent event) {
         System.out.println("🔄 Order UPDATED received: " + event);
 
-        OrderUpdatedEvent orderUpdatedEvent = (OrderUpdatedEvent) event;
-
-        if (!orderUpdatedEvent.getOldProductId()
-                .equals(orderUpdatedEvent.getNewProductId())) {
+        if (!event.getOldProductId()
+                .equals(event.getNewProductId())) {
 
             InventoryRequest releaseRequest = new InventoryRequest();
-            releaseRequest.setProductId(orderUpdatedEvent.getOldProductId());
-            releaseRequest.setQuantity(orderUpdatedEvent.getOldQuantity());
+            releaseRequest.setProductId(event.getOldProductId());
+            releaseRequest.setQuantity(event.getOldQuantity());
             inventoryService.releaseStock(releaseRequest);
 
             InventoryRequest reserveRequest = new InventoryRequest();
-            reserveRequest.setProductId(orderUpdatedEvent.getNewProductId());
-            reserveRequest.setQuantity(orderUpdatedEvent.getNewQuantity());          
+            reserveRequest.setProductId(event.getNewProductId());
+            reserveRequest.setQuantity(event.getNewQuantity());          
             inventoryService.reserveStock(reserveRequest);
             return;
         }
 
         InventoryRequest request = new InventoryRequest();
-        request.setProductId(orderUpdatedEvent.getNewProductId());
-        request.setQuantity(orderUpdatedEvent.getNewQuantity());
+        request.setProductId(event.getNewProductId());
+        request.setQuantity(event.getNewQuantity());
         inventoryService.reserveStock(request);
     }
 }

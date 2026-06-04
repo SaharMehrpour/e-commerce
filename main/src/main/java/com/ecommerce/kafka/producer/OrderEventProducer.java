@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import com.ecommerce.event.Event;
 import com.ecommerce.event.OrderCancelledEvent;
 import com.ecommerce.event.OrderCreatedEvent;
 import com.ecommerce.event.OrderUpdatedEvent;
@@ -12,13 +11,13 @@ import com.ecommerce.event.OrderUpdatedEvent;
 @Service
 public class OrderEventProducer {
 
-    private final KafkaTemplate<String, Event> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final String orderCreatedTopic;
     private final String orderCancelledTopic;
     private final String orderUpdatedTopic;
 
     public OrderEventProducer(
-            KafkaTemplate<String, Event> kafkaTemplate,
+            KafkaTemplate<String, Object> kafkaTemplate,
             @Value("${app.kafka.topics.order-created}") String orderCreatedTopic,
             @Value("${app.kafka.topics.order-cancelled}") String orderCancelledTopic,
             @Value("${app.kafka.topics.order-updated}") String orderUpdatedTopic) {

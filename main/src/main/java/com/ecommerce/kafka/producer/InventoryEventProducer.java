@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import com.ecommerce.event.Event;
 import com.ecommerce.event.InventoryFailedEvent;
 import com.ecommerce.event.InventoryReservedEvent;
 import com.ecommerce.event.InventoryRestoredEvent;
@@ -13,14 +12,14 @@ import com.ecommerce.event.InventoryUpdatedEvent;
 @Service
 public class InventoryEventProducer {
 
-    private final KafkaTemplate<String, Event> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final String inventoryReservedTopic;
     private final String inventoryRestoredTopic;
     private final String inventoryFailedTopic;
     private final String inventoryUpdatedTopic;
 
     public InventoryEventProducer(
-            KafkaTemplate<String, Event> kafkaTemplate,
+            KafkaTemplate<String, Object> kafkaTemplate,
             @Value("${app.kafka.topics.inventory-reserved}") String inventoryReservedTopic,
             @Value("${app.kafka.topics.inventory-restored}") String inventoryRestoredTopic,
             @Value("${app.kafka.topics.inventory-failed}") String inventoryFailedTopic,

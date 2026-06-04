@@ -17,12 +17,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.ecommerce.dto.InventoryRequest;
 import com.ecommerce.exception.InventoryNotEnoughException;
 import com.ecommerce.exception.InventoryNotFoundException;
+import com.ecommerce.kafka.producer.InventoryEventProducer;
 
 @ExtendWith(MockitoExtension.class)
 public class InventoryServiceTest {
 
     @Mock
     private InventoryRepository inventoryRepository;
+
+    @Mock
+    private InventoryEventProducer kafkaProducer;
 
     @InjectMocks
     private InventoryService inventoryService;

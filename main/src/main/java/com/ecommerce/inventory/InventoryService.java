@@ -8,19 +8,28 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecommerce.dto.InventoryRequest;
+import com.ecommerce.event.InventoryFailedEvent;
+import com.ecommerce.event.InventoryReservedEvent;
+import com.ecommerce.event.InventoryRestoredEvent;
+import com.ecommerce.event.InventoryUpdatedEvent;
 import com.ecommerce.exception.InventoryNotEnoughException;
 import com.ecommerce.exception.InventoryNotFoundException;
+import com.ecommerce.kafka.producer.InventoryEventProducer;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class InventoryService {
 
     private final InventoryRepository inventoryRepository;
+    private final InventoryEventProducer kafkaProducer;
 
-    public InventoryService(InventoryRepository inventoryRepository) {
+    public InventoryService(InventoryRepository inventoryRepository,
+        InventoryEventProducer kafkaProducer) {
         this.inventoryRepository = inventoryRepository;
+        this.kafkaProducer = kafkaProducer;
     }
 
     @Caching(
@@ -36,7 +45,14 @@ public class InventoryService {
                 .orElseGet(() -> new InventoryItem(productId, 0, 0));
 
         item.setAvailableQuantity(item.getAvailableQuantity() + quantity);
-        inventoryRepository.save(item);
+        item = inventoryRepository.save(item);
+
+        kafkaProducer.sendInventoryUpdatedEvent(new InventoryUpdatedEvent(
+                UUID.randomUUID().toString(),
+                productId,
+                item.getAvailableQuantity(),
+                item.getReservedQuantity()));
+
         return Optional.of(item);
     }
 
@@ -50,11 +66,27 @@ public class InventoryService {
         Integer quantity = request.getQuantity();
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
-                .orElseThrow(() -> 
-                    new InventoryNotFoundException("Inventory item not found for product " + productId)
-                );
+                .orElseThrow(() -> {
+                    InventoryFailedEvent event = new InventoryFailedEvent(
+                            UUID.randomUUID().toString(),
+                            "RESERVE_STOCK_FAILED",
+                            "PRODUCT_NOT_FOUND");
+                    event.setProductId(productId);
+                    event.setQuantity(quantity);
+                    kafkaProducer.sendInventoryFailedEvent(event);
+
+                    return new InventoryNotFoundException("Inventory item not found for product " + productId);
+                });
 
         if (item.getAvailableQuantity() < quantity) {
+            InventoryFailedEvent event = new InventoryFailedEvent(
+                    UUID.randomUUID().toString(),
+                    "RESERVE_STOCK_FAILED",
+                    "INSUFFICIENT_STOCK");
+            event.setProductId(productId);
+            event.setQuantity(quantity);
+            kafkaProducer.sendInventoryFailedEvent(event);
+
             throw new InventoryNotEnoughException("Insufficient stock for product " + productId);
         }
 
@@ -62,6 +94,12 @@ public class InventoryService {
         item.setReservedQuantity(item.getReservedQuantity() + quantity);
 
         inventoryRepository.save(item);
+
+        kafkaProducer.sendInventoryReservedEvent(new InventoryReservedEvent(
+                UUID.randomUUID().toString(),
+                productId,
+                quantity));
+
         return Optional.of(item);
     }
 
@@ -75,12 +113,27 @@ public class InventoryService {
         Integer quantity = request.getQuantity();
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
-                .orElseThrow(() -> 
-                    new InventoryNotFoundException("Inventory item not found for product " + productId)
-                );
+                .orElseThrow(() -> {
+                    InventoryFailedEvent event = new InventoryFailedEvent(
+                            UUID.randomUUID().toString(),
+                            "DEDUCT_STOCK_FAILED",
+                            "PRODUCT_NOT_FOUND");
+                    event.setProductId(productId);
+                    event.setQuantity(quantity);
+                    kafkaProducer.sendInventoryFailedEvent(event);
+
+                    return new InventoryNotFoundException("Inventory item not found for product " + productId);
+                });
 
         item.setReservedQuantity(item.getReservedQuantity() - quantity);
-        inventoryRepository.save(item);
+        item = inventoryRepository.save(item);
+
+        kafkaProducer.sendInventoryUpdatedEvent(new InventoryUpdatedEvent(
+                UUID.randomUUID().toString(),
+                productId,
+                item.getAvailableQuantity(),
+                item.getReservedQuantity()));
+
         return Optional.of(item);
     }
 
@@ -94,14 +147,28 @@ public class InventoryService {
         Integer quantity = request.getQuantity();
 
         InventoryItem item = inventoryRepository.findByProductId(productId)
-                .orElseThrow(() -> 
-                    new InventoryNotFoundException("Inventory item not found for product " + productId)
-                );
+                .orElseThrow(() -> {
+                    InventoryFailedEvent event = new InventoryFailedEvent(
+                            UUID.randomUUID().toString(),
+                            "RELEASE_STOCK_FAILED",
+                            "PRODUCT_NOT_FOUND");
+                    event.setProductId(productId);
+                    event.setQuantity(quantity);
+                    kafkaProducer.sendInventoryFailedEvent(event);
+
+                    return new InventoryNotFoundException("Inventory item not found for product " + productId);
+                });
 
         item.setAvailableQuantity(item.getAvailableQuantity() + quantity);
         item.setReservedQuantity(item.getReservedQuantity() - quantity);
 
         inventoryRepository.save(item);
+
+        kafkaProducer.sendInventoryRestoredEvent(new InventoryRestoredEvent(
+                UUID.randomUUID().toString(),
+                productId,
+                quantity));
+
         return Optional.of(item);
     }
 

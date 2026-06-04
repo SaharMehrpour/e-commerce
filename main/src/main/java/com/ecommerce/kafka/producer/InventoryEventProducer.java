@@ -5,6 +5,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.ecommerce.event.Event;
+import com.ecommerce.event.InventoryFailedEvent;
 import com.ecommerce.event.InventoryReservedEvent;
 import com.ecommerce.event.InventoryRestoredEvent;
 import com.ecommerce.event.InventoryUpdatedEvent;
@@ -39,7 +40,7 @@ public class InventoryEventProducer {
         kafkaTemplate.send(inventoryRestoredTopic, event.getEventId(), event);
     }
 
-    public void sendInventoryFailedEvent(Event event) {
+    public void sendInventoryFailedEvent(InventoryFailedEvent event) {
         kafkaTemplate.send(inventoryFailedTopic, event.getEventId(), event);
     }
 

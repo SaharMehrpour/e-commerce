@@ -10,14 +10,14 @@ import com.ecommerce.event.OrderCreatedEvent;
 import com.ecommerce.event.OrderUpdatedEvent;
 
 @Service
-public class OrderKafkaProducer {
+public class OrderEventProducer {
 
     private final KafkaTemplate<String, Event> kafkaTemplate;
     private final String orderCreatedTopic;
     private final String orderCancelledTopic;
     private final String orderUpdatedTopic;
 
-    public OrderKafkaProducer(
+    public OrderEventProducer(
             KafkaTemplate<String, Event> kafkaTemplate,
             @Value("${app.kafka.topics.order-created}") String orderCreatedTopic,
             @Value("${app.kafka.topics.order-cancelled}") String orderCancelledTopic,

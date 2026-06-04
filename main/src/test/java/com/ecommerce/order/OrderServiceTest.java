@@ -19,7 +19,7 @@ import com.ecommerce.exception.InventoryNotFoundException;
 import com.ecommerce.exception.OrderAlreadyCancelledException;
 import com.ecommerce.exception.OrderNotFoundException;
 import com.ecommerce.exception.OrderNotUpdatableException;
-import com.ecommerce.kafka.producer.OrderKafkaProducer;
+import com.ecommerce.kafka.producer.OrderEventProducer;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +41,7 @@ class OrderServiceTest {
     private OrderRepository repository;
 
     @Mock
-    private OrderKafkaProducer kafkaProducer;
+    private OrderEventProducer kafkaProducer;
 
     @Mock
     private RestTemplate restTemplate;

@@ -99,6 +99,45 @@ class OrderEventConsumerTest {
         verify(inventoryService, times(1)).reserveStock(reserveCaptor.capture());
         InventoryRequest capturedReserve = reserveCaptor.getValue();
         assertEquals("p1", capturedReserve.getProductId());
-        assertEquals(4, capturedReserve.getQuantity());
+        assertEquals(2, capturedReserve.getQuantity());
+    }
+
+    @Test
+    void handleOrderUpdatedShouldReleaseDeltaWhenSameProductQuantityDecreases() {
+        OrderUpdatedEvent event = new OrderUpdatedEvent(
+                "event-1",
+                "o1",
+                "p1",
+                5,
+                "p1",
+                2
+        );
+
+        orderEventConsumer.handleOrderUpdated(event);
+
+        verify(inventoryService, never()).reserveStock(any());
+
+        ArgumentCaptor<InventoryRequest> releaseCaptor = ArgumentCaptor.forClass(InventoryRequest.class);
+        verify(inventoryService, times(1)).releaseStock(releaseCaptor.capture());
+        InventoryRequest capturedRelease = releaseCaptor.getValue();
+        assertEquals("p1", capturedRelease.getProductId());
+        assertEquals(3, capturedRelease.getQuantity());
+    }
+
+    @Test
+    void handleOrderUpdatedShouldDoNothingWhenSameProductQuantityUnchanged() {
+        OrderUpdatedEvent event = new OrderUpdatedEvent(
+                "event-1",
+                "o1",
+                "p1",
+                5,
+                "p1",
+                5
+        );
+
+        orderEventConsumer.handleOrderUpdated(event);
+
+        verify(inventoryService, never()).reserveStock(any());
+        verify(inventoryService, never()).releaseStock(any());
     }
 }

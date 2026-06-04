@@ -2,10 +2,12 @@ package com.ecommerce.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -49,6 +51,40 @@ public class GlobalExceptionHandler {
                         "timestamp", LocalDateTime.now(),
                         "error", "Invalid Order",
                         "message", ex.getMessage()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidInventoryException.class)
+    public ResponseEntity<?> handleInvalidInventoryException(
+            InvalidInventoryException ex
+    ) {
+
+        return ResponseEntity.badRequest().body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "Invalid Inventory Request",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<?> handleValidationException(
+            MethodArgumentNotValidException ex
+    ) {
+        Map<String, String> fieldErrors = new HashMap<>();
+
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                fieldErrors.put(error.getField(), error.getDefaultMessage())
+        );
+
+        return ResponseEntity.badRequest().body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "error", "Validation Failed",
+                        "message", "Request validation failed",
+                        "fields", fieldErrors
                 )
         );
     }

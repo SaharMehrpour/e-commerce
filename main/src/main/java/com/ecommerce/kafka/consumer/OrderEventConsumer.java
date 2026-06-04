@@ -68,9 +68,21 @@ public class OrderEventConsumer {
             return;
         }
 
+        int quantityDelta = event.getNewQuantity() - event.getOldQuantity();
+
+        if (quantityDelta == 0) {
+            return;
+        }
+
         InventoryRequest request = new InventoryRequest();
         request.setProductId(event.getNewProductId());
-        request.setQuantity(event.getNewQuantity());
-        inventoryService.reserveStock(request);
+        request.setQuantity(Math.abs(quantityDelta));
+
+        if (quantityDelta > 0) {
+            inventoryService.reserveStock(request);
+            return;
+        }
+
+        inventoryService.releaseStock(request);
     }
 }

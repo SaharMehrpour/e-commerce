@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ecommerce.dto.CreateOrderRequest;
 import com.ecommerce.dto.UpdateOrderRequest;
 
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -27,7 +29,7 @@ public class OrderController {
     }
 
     @PostMapping
-    public Order createOrder(@RequestBody CreateOrderRequest request) {
+    public Order createOrder(@Valid @RequestBody CreateOrderRequest request) {
         return orderService.createOrder(request);
     }
 
@@ -51,7 +53,10 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<Order> updateOrderFields(@PathVariable String id, @RequestBody UpdateOrderRequest request) {
+    public ResponseEntity<Order> updateOrderFields(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateOrderRequest request
+    ) {
         return orderService.updateOrder(id, request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

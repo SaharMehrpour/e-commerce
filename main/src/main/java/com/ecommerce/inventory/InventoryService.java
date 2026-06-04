@@ -12,6 +12,7 @@ import com.ecommerce.event.InventoryFailedEvent;
 import com.ecommerce.event.InventoryReservedEvent;
 import com.ecommerce.event.InventoryRestoredEvent;
 import com.ecommerce.event.InventoryUpdatedEvent;
+import com.ecommerce.exception.InvalidInventoryException;
 import com.ecommerce.exception.InventoryNotEnoughException;
 import com.ecommerce.exception.InventoryNotFoundException;
 import com.ecommerce.kafka.producer.InventoryEventProducer;
@@ -38,6 +39,8 @@ public class InventoryService {
     )
     @Transactional
     public Optional<InventoryItem> addStock(InventoryRequest request) {
+        validateInventoryRequest(request);
+
         String productId = request.getProductId();
         Integer quantity = request.getQuantity();
 
@@ -62,6 +65,8 @@ public class InventoryService {
     )
     @Transactional
     public Optional<InventoryItem> reserveStock(InventoryRequest request) {
+        validateInventoryRequest(request);
+
         String productId = request.getProductId();
         Integer quantity = request.getQuantity();
 
@@ -109,6 +114,8 @@ public class InventoryService {
     )
     @Transactional
     public Optional<InventoryItem> deductStock(InventoryRequest request) {
+        validateInventoryRequest(request);
+
         String productId = request.getProductId();
         Integer quantity = request.getQuantity();
 
@@ -124,6 +131,12 @@ public class InventoryService {
 
                     return new InventoryNotFoundException("Inventory item not found for product " + productId);
                 });
+
+        if (item.getReservedQuantity() < quantity) {
+            throw new InventoryNotEnoughException(
+                    "Reserved stock is less than requested quantity for product " + productId
+            );
+        }
 
         item.setReservedQuantity(item.getReservedQuantity() - quantity);
         item = inventoryRepository.save(item);
@@ -143,6 +156,8 @@ public class InventoryService {
     )
     @Transactional
     public Optional<InventoryItem> releaseStock(InventoryRequest request) {
+        validateInventoryRequest(request);
+
         String productId = request.getProductId();
         Integer quantity = request.getQuantity();
 
@@ -158,6 +173,12 @@ public class InventoryService {
 
                     return new InventoryNotFoundException("Inventory item not found for product " + productId);
                 });
+
+        if (item.getReservedQuantity() < quantity) {
+            throw new InventoryNotEnoughException(
+                    "Reserved stock is less than requested quantity for product " + productId
+            );
+        }
 
         item.setAvailableQuantity(item.getAvailableQuantity() + quantity);
         item.setReservedQuantity(item.getReservedQuantity() - quantity);
@@ -180,5 +201,19 @@ public class InventoryService {
     @Cacheable(value = "inventoryList")
     public List<InventoryItem> getAllInventory() {
         return inventoryRepository.findAll();
+    }
+
+    private void validateInventoryRequest(InventoryRequest request) {
+        if (request == null) {
+            throw new InvalidInventoryException("Inventory request is required");
+        }
+
+        if (request.getProductId() == null || request.getProductId().isBlank()) {
+            throw new InvalidInventoryException("Product ID is required");
+        }
+
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            throw new InvalidInventoryException("Quantity must be greater than zero");
+        }
     }
 }

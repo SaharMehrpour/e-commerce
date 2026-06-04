@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerce.dto.InventoryRequest;
 
+import jakarta.validation.Valid;
+
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/inventory")
@@ -24,28 +26,28 @@ public class InventoryController {
     }
     
     @PatchMapping("/add")
-    public ResponseEntity<InventoryItem> addStock(@RequestBody InventoryRequest request) {
+    public ResponseEntity<InventoryItem> addStock(@Valid @RequestBody InventoryRequest request) {
         return inventoryService.addStock(request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/reserve")
-    public ResponseEntity<InventoryItem> reserveStock(@RequestBody InventoryRequest request) {
+    public ResponseEntity<InventoryItem> reserveStock(@Valid @RequestBody InventoryRequest request) {
         return inventoryService.reserveStock(request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/deduct")
-    public ResponseEntity<InventoryItem> deductStock(@RequestBody InventoryRequest request) {
+    public ResponseEntity<InventoryItem> deductStock(@Valid @RequestBody InventoryRequest request) {
         return inventoryService.deductStock(request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/release")
-    public ResponseEntity<InventoryItem> releaseStock(@RequestBody InventoryRequest request) {
+    public ResponseEntity<InventoryItem> releaseStock(@Valid @RequestBody InventoryRequest request) {
         return inventoryService.releaseStock(request)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

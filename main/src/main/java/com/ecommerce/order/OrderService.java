@@ -51,6 +51,10 @@ public class OrderService {
     )
     @Transactional
     public Order createOrder(CreateOrderRequest request) {
+        if (request == null) {
+            throw new InvalidOrderException("Order request is required");
+        }
+
         if (request.getUserId() == null || request.getUserId().isBlank()) {
             throw new InvalidOrderException("User ID is required");
         }
@@ -164,6 +168,9 @@ public class OrderService {
     )
     @Transactional
     public Optional<Order> updateOrder(String id, UpdateOrderRequest request) {
+        if (request == null) {
+            throw new InvalidOrderException("Order update request is required");
+        }
 
         Order order = repository.findById(id)
             .orElseThrow(() ->
@@ -182,6 +189,10 @@ public class OrderService {
         Integer oldQuantity = order.getQuantity();
 
         if (request.getProductId() != null) {
+            if (request.getProductId().isBlank()) {
+                throw new InvalidOrderException("Product ID is required");
+            }
+
             order.setProductId(request.getProductId());
         }
 

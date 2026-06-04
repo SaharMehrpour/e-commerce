@@ -10,17 +10,17 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 import static org.mockito.Mockito.*;
 
-class OrderKafkaProducerTest {
+class OrderEventProducerTest {
 
     private KafkaTemplate<String, com.ecommerce.event.Event> kafkaTemplate;
-    private OrderKafkaProducer producer;
+    private OrderEventProducer producer;
 
     @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() {
         kafkaTemplate = mock(KafkaTemplate.class);
 
-        producer = new OrderKafkaProducer(
+        producer = new OrderEventProducer(
                 kafkaTemplate,
                 "order-created",
                 "order-cancelled",

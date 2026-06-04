@@ -22,7 +22,7 @@ import com.ecommerce.exception.InventoryNotFoundException;
 import com.ecommerce.exception.OrderAlreadyCancelledException;
 import com.ecommerce.exception.OrderNotFoundException;
 import com.ecommerce.exception.OrderNotUpdatableException;
-import com.ecommerce.kafka.producer.OrderKafkaProducer;
+import com.ecommerce.kafka.producer.OrderEventProducer;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,13 +32,13 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository repository;
-    private final OrderKafkaProducer kafkaProducer;
+    private final OrderEventProducer kafkaProducer;
     private final RestTemplate restTemplate;
 
     @Value("${inventory.service.url}")
     private String inventoryServiceUrl;
 
-    public OrderService(OrderRepository repository, OrderKafkaProducer kafkaProducer,
+    public OrderService(OrderRepository repository, OrderEventProducer kafkaProducer,
         RestTemplate restTemplate) {
         this.repository = repository;
         this.kafkaProducer = kafkaProducer;

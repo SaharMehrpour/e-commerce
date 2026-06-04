@@ -12,7 +12,7 @@ import static org.mockito.Mockito.*;
 
 class OrderEventProducerTest {
 
-    private KafkaTemplate<String, com.ecommerce.event.Event> kafkaTemplate;
+    private KafkaTemplate<String, Object> kafkaTemplate;
     private OrderEventProducer producer;
 
     @SuppressWarnings("unchecked")

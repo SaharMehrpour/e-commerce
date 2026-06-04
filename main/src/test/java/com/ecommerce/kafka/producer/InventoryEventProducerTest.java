@@ -14,7 +14,7 @@ import com.ecommerce.event.InventoryUpdatedEvent;
 
 public class InventoryEventProducerTest {
 
-    private KafkaTemplate<String, com.ecommerce.event.Event> kafkaTemplate;
+    private KafkaTemplate<String, Object> kafkaTemplate;
     private InventoryEventProducer producer;
 
     @SuppressWarnings("unchecked")

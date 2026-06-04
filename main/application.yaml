@@ -20,8 +20,7 @@ spring:
 
       properties:
         spring.json.trusted.packages: "com.ecommerce.event"
-        spring.json.use.type.headers: true
-        spring.json.value.default.type: com.ecommerce.event.Event
+        spring.json.use.type.headers: false
         spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
         spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
 

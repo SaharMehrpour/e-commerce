@@ -47,40 +47,6 @@ Future microservices (Payment, Inventory, Shipping)
 ```
 
 
-## 📦 Features (So Far)
-
-### Order Service
-- Create order
-- Cancel order
-- Fetch all orders
-- Fetch single order
-- Update single order
-
-### Inventory Service
-- Track product stock
-- Reserve stock
-- Deduct stock (on confirmed order)
-- Restore stock (on cancellation)
-- Check availability
-- Update stock
-- View the inventory
-
-### Event-Driven Messaging
-- `OrderCreatedEvent`
-- `OrderCancelledEvent`
-- `OrderUpdatedEvent`
-- Kafka producer integration
-
-### Caching
-- Redis caching for orders
-- Cache update on write operations
-
-### Frontend
-- Create orders from UI
-- View orders
-- Simple React interface
-
-
 ## 🧪 Testing
 
 ### Backend
@@ -139,20 +105,11 @@ This script will:
 - Stop the frontend development server (if running in background)
 
 ## 📡 API Endpoints
-Orders:
-- Create Order `POST /orders`
-- Get All Orders `GET /orders`
-- Get Order by ID `GET /orders/{id}`
-- Cancel Order `PATCH /orders/{id}/cancel`
 
-Inventory:
-- Stock product `PATCH /inventory/add`
-- Reserve stock `PATCH /inventory/reserve`
-- Deduct stock `PATCH /inventory/deduct`
-- Restore stock `PATCH /inventory/release`
-- Check availability `GET /inventory/{product_id}`
-- Update stock  `PATCH /inventory/{product_id}`
-- Get inventory `GET /inventory`
+Implemented in:
+
+- `main/src/main/java/com/ecommerce/order/OrderController.java`
+- `main/src/main/java/com/ecommerce/inventory/InventoryController.java`
 
 
 ## 🧠 Key Design Decisions
@@ -177,7 +134,6 @@ A Relational database acts as the source of truth for inventory data.
 
 ## 🔥 Future Improvements
 - Payment microservice (Kafka consumer)
-- Inventory service
 - Dockerize frontend
 - Kubernetes deployment (Minikube)
 - API Gateway

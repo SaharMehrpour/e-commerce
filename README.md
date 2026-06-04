@@ -36,15 +36,26 @@ This project is designed for learning and demonstrating modern backend architect
 React Frontend
 ↓ HTTP
 Spring Boot Backend
-↓
-MongoDB (source of truth)
-PostgreSQL (source of truth)
-Redis (cache layer)
-↓
-Kafka (event-driven messaging)
-↓
-Future microservices (Payment, Inventory, Shipping)
+├─ Order module → MongoDB
+├─ Inventory module → PostgreSQL
+├─ Redis cache
+└─ Kafka events
 ```
+
+The backend is currently a modular monolith: order and inventory are separate application modules in one Spring Boot process. Kafka is used to model the future service boundary and keep inventory updates event-driven, while the order flow still performs a synchronous inventory availability check before creating an order.
+
+### Backend Boundaries
+- `order`: owns order persistence, order lifecycle rules, and order Kafka events.
+- `inventory`: owns stock mutations, stock invariants, and inventory Kafka events.
+- `kafka`: contains producers/consumers for integration between modules.
+- `config`: contains infrastructure wiring for Kafka, Redis, and HTTP clients.
+- `exception`: centralizes HTTP error mapping.
+
+### Current Tradeoffs
+- Order data is stored in MongoDB and inventory data in PostgreSQL. This is valid for demonstrating polyglot persistence, but it adds operational complexity in a single backend.
+- Redis is a read-through cache for orders and inventory. Mutating commands evict list caches and refresh item caches.
+- Kafka events are emitted after local database writes. For production reliability, the next required step is an outbox pattern so database commits and event publication cannot drift apart.
+- Inventory updates must be idempotent before multiple service instances or Kafka retries are introduced. Event IDs already exist and can become the basis for processed-event tracking.
 
 
 ## 🧪 Testing

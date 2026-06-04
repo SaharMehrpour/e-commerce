@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ecommerce.dto.InventoryRequest;
+import com.ecommerce.exception.InvalidInventoryException;
 import com.ecommerce.exception.InventoryNotEnoughException;
 import com.ecommerce.exception.InventoryNotFoundException;
 import com.ecommerce.kafka.producer.InventoryEventProducer;
@@ -163,6 +164,24 @@ public class InventoryServiceTest {
     }
 
     @Test
+    void deductStockShouldThrowWhenReservedQuantityIsTooLow() {
+        InventoryItem existingItem = new InventoryItem("product-123", 10, 2);
+        when(inventoryRepository.findByProductId("product-123")).thenReturn(Optional.of(existingItem));
+
+        InventoryRequest request = new InventoryRequest();
+        request.setProductId("product-123");
+        request.setQuantity(5);
+
+        InventoryNotEnoughException ex = assertThrows(
+                InventoryNotEnoughException.class,
+                () -> inventoryService.deductStock(request)
+        );
+
+        assertEquals("Reserved stock is less than requested quantity for product product-123", ex.getMessage());
+        verify(inventoryRepository, never()).save(any());
+    }
+
+    @Test
     void releaseStockShouldBeUpdatedInInventory() {
         InventoryItem existingItem = new InventoryItem("product-123", 10, 5);
         when(inventoryRepository.findByProductId("product-123")).thenReturn(Optional.of(existingItem));
@@ -197,6 +216,39 @@ public class InventoryServiceTest {
         
         assertEquals("Inventory item not found for product product-123", ex.getMessage());
         verify(inventoryRepository, never()).save(any());
+    }
+
+    @Test
+    void releaseStockShouldThrowWhenReservedQuantityIsTooLow() {
+        InventoryItem existingItem = new InventoryItem("product-123", 10, 2);
+        when(inventoryRepository.findByProductId("product-123")).thenReturn(Optional.of(existingItem));
+
+        InventoryRequest request = new InventoryRequest();
+        request.setProductId("product-123");
+        request.setQuantity(5);
+
+        InventoryNotEnoughException ex = assertThrows(
+                InventoryNotEnoughException.class,
+                () -> inventoryService.releaseStock(request)
+        );
+
+        assertEquals("Reserved stock is less than requested quantity for product product-123", ex.getMessage());
+        verify(inventoryRepository, never()).save(any());
+    }
+
+    @Test
+    void addStockShouldRejectInvalidRequest() {
+        InventoryRequest request = new InventoryRequest();
+        request.setProductId(" ");
+        request.setQuantity(5);
+
+        InvalidInventoryException ex = assertThrows(
+                InvalidInventoryException.class,
+                () -> inventoryService.addStock(request)
+        );
+
+        assertEquals("Product ID is required", ex.getMessage());
+        verifyNoInteractions(inventoryRepository);
     }
 
     @Test

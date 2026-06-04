@@ -1,10 +1,12 @@
 package com.ecommerce.dto;
 
+import jakarta.validation.constraints.Min;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class UpdateOrderRequest {
 
+    @Min(value = 1, message = "Quantity must be greater than zero")
     private Integer quantity;
     private String productId;
 

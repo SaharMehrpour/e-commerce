@@ -1,6 +1,7 @@
 package com.ecommerce.config;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -8,6 +9,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 import org.springframework.util.backoff.FixedBackOff;
@@ -58,68 +61,79 @@ public class KafkaConsumerConfig {
     }
 
     private <T> ConcurrentKafkaListenerContainerFactory<String, T>
-    kafkaListenerContainerFactory(Class<T> eventClass) {
+    kafkaListenerContainerFactory(Class<T> eventClass, DefaultErrorHandler errorHandler) {
 
         ConcurrentKafkaListenerContainerFactory<String, T> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(consumerFactory(eventClass));
-        factory.setCommonErrorHandler(errorHandler());
+        factory.setCommonErrorHandler(errorHandler);
 
         return factory;
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderCreatedEvent>
-    orderCreatedKafkaListenerFactory() {
-        return kafkaListenerContainerFactory(OrderCreatedEvent.class);
+    orderCreatedKafkaListenerFactory(DefaultErrorHandler errorHandler) {
+        return kafkaListenerContainerFactory(OrderCreatedEvent.class, errorHandler);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderCancelledEvent>
-    orderCancelledKafkaListenerFactory() {
-        return kafkaListenerContainerFactory(OrderCancelledEvent.class);
+    orderCancelledKafkaListenerFactory(DefaultErrorHandler errorHandler) {
+        return kafkaListenerContainerFactory(OrderCancelledEvent.class, errorHandler);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, OrderUpdatedEvent>
-    orderUpdatedKafkaListenerFactory() {
-        return kafkaListenerContainerFactory(OrderUpdatedEvent.class);
+    orderUpdatedKafkaListenerFactory(DefaultErrorHandler errorHandler) {
+        return kafkaListenerContainerFactory(OrderUpdatedEvent.class, errorHandler);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, InventoryReservedEvent>
-    inventoryReservedEventKafkaListenerFactory() {
-        return kafkaListenerContainerFactory(InventoryReservedEvent.class);
+    inventoryReservedEventKafkaListenerFactory(DefaultErrorHandler errorHandler) {
+        return kafkaListenerContainerFactory(InventoryReservedEvent.class, errorHandler);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, InventoryRestoredEvent>
-    inventoryRestoredEventKafkaListenerFactory() {
-        return kafkaListenerContainerFactory(InventoryRestoredEvent.class);
+    inventoryRestoredEventKafkaListenerFactory(DefaultErrorHandler errorHandler) {
+        return kafkaListenerContainerFactory(InventoryRestoredEvent.class, errorHandler);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, InventoryFailedEvent>
-    inventoryFailedEventKafkaListenerFactory() {
-        return kafkaListenerContainerFactory(InventoryFailedEvent.class);
+    inventoryFailedEventKafkaListenerFactory(DefaultErrorHandler errorHandler) {
+        return kafkaListenerContainerFactory(InventoryFailedEvent.class, errorHandler);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, InventoryUpdatedEvent>
-    inventoryUpdatedEventKafkaListenerFactory() {
-        return kafkaListenerContainerFactory(InventoryUpdatedEvent.class);
+    inventoryUpdatedEventKafkaListenerFactory(DefaultErrorHandler errorHandler) {
+        return kafkaListenerContainerFactory(InventoryUpdatedEvent.class, errorHandler);
     }
 
     @Bean
-    public DefaultErrorHandler errorHandler() {
+    public DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<String, Object> kafkaTemplate) {
+
+        DeadLetterPublishingRecoverer recoverer =
+                new DeadLetterPublishingRecoverer(
+                        kafkaTemplate,
+                        (record, exception) -> new TopicPartition(record.topic() + "-dlt", record.partition())
+                );
+
         FixedBackOff backOff = new FixedBackOff(1000L, 3);
 
-        return new DefaultErrorHandler(
-                (record, exception) -> System.err.println(
-                        "Skipping message due to error: " + exception.getMessage()
-                ),
-                backOff
-        );
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
+
+        errorHandler.setRetryListeners((record, ex, deliveryAttempt) -> {
+        System.out.println("🔁 Retry attempt " + deliveryAttempt +
+                    " | topic=" + record.topic() +
+                    " | key=" + record.key() +
+                    " | error=" + ex.getMessage());
+        });
+
+        return errorHandler;
     }
 }

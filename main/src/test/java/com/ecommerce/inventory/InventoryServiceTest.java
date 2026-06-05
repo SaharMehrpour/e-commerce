@@ -3,6 +3,7 @@ package com.ecommerce.inventory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
@@ -287,5 +288,46 @@ public class InventoryServiceTest {
         assertTrue(result.contains(item1));
         assertTrue(result.contains(item2));
         verify(inventoryRepository, times(1)).findAll();
+    }
+
+    @Test
+    void validateInventoryRequestShouldThrowWhenRequestIsNull() {
+        InvalidInventoryException ex = assertThrows(
+                InvalidInventoryException.class,
+                () -> inventoryService.addStock(null)
+        );
+
+        assertEquals("Inventory request is required", ex.getMessage());
+        verifyNoInteractions(inventoryRepository);
+    }
+
+    @Test
+    void validateInventoryRequestShouldThrowWhenProductIdIsBlank() {
+        InventoryRequest request = new InventoryRequest();
+        request.setProductId(" ");
+        request.setQuantity(5); 
+
+        InvalidInventoryException ex = assertThrows(
+                InvalidInventoryException.class,
+                () -> inventoryService.addStock(request)
+        );
+        
+        assertEquals("Product ID is required", ex.getMessage());
+        verifyNoInteractions(inventoryRepository);
+    }
+
+    @Test
+    void validateInventoryRequestShouldThrowWhenQuantityIsInvalid() {
+        InventoryRequest request = new InventoryRequest();
+        request.setProductId("product-123");
+        request.setQuantity(0);
+        
+        InvalidInventoryException ex = assertThrows(
+                InvalidInventoryException.class,
+                () -> inventoryService.addStock(request)
+        );
+        
+        assertEquals("Quantity must be greater than zero", ex.getMessage());
+        verifyNoInteractions(inventoryRepository);
     }
 }

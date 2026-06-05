@@ -93,6 +93,18 @@ class OrderServiceTest {
     }
 
     @Test
+    void createOrderShouldThrowWhenRequestIsNull() {
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.createOrder(null)
+        );
+
+        assertEquals("Order request is required", ex.getMessage());
+        verifyNoInteractions(repository);
+        verifyNoInteractions(kafkaProducer);
+    }
+
+    @Test
     void createOrderShouldThrowWhenUserIdIsMissing() {
 
         CreateOrderRequest request = new CreateOrderRequest();
@@ -329,6 +341,19 @@ class OrderServiceTest {
         assertEquals(2, event.getOldQuantity());
         assertEquals("updated-product", event.getNewProductId());
         assertEquals(10, event.getNewQuantity());
+    }
+
+    @Test
+    void updateOrderShouldThrowWhenRequestIsNull() {
+
+        InvalidOrderException ex = assertThrows(
+                InvalidOrderException.class,
+                () -> orderService.updateOrder("order-1", null)
+        );
+
+        assertEquals("Order update request is required", ex.getMessage());
+        verify(repository, never()).save(any());
+        verifyNoInteractions(kafkaProducer);
     }
 
     @Test

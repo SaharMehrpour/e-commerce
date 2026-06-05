@@ -28,7 +28,6 @@ import com.ecommerce.shared.exception.OrderNotUpdatableException;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class OrderService {
@@ -89,7 +88,6 @@ public class OrderService {
         Order savedOrder = repository.save(order);
 
         OrderCreatedEvent event = new OrderCreatedEvent(
-                UUID.randomUUID().toString(),
                 savedOrder.getId(),
                 savedOrder.getUserId(),
                 savedOrder.getProductId(),
@@ -144,7 +142,6 @@ public class OrderService {
 
         OrderCancelledEvent event =
                 new OrderCancelledEvent(
-                        UUID.randomUUID().toString(),
                         updatedOrder.getId(),
                         updatedOrder.getUserId(),
                         productId,
@@ -212,7 +209,6 @@ public class OrderService {
 
         kafkaProducer.sendOrderUpdatedEvent(
                 new OrderUpdatedEvent(
-                        UUID.randomUUID().toString(),
                         updatedOrder.getId(),
                         oldProductId,
                         oldQuantity,

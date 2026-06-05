@@ -1,45 +1,29 @@
 package com.ecommerce.shared.event;
 
-import lombok.NoArgsConstructor;
+import java.time.Instant;
+import java.util.UUID;
 
-@NoArgsConstructor
-public abstract class Event {
+public class Event {
 
     private String eventId;
-    private String eventType;
+    private EventType eventType;
     private String createdAt;
 
-    public Event(
-            String eventId,
-            String eventType,
-            String createdAt
-    ) {
-        this.eventId = eventId;
+    public Event(EventType eventType) {
+        this.eventId = UUID.randomUUID().toString();
         this.eventType = eventType;
-        this.createdAt = createdAt;
+        this.createdAt = Instant.now().toString();
     }
 
     public String getEventId() {
         return eventId;
     }
 
-    public String getEventType() {
+    public EventType getEventType() {
         return eventType;
     }
 
     public String getCreatedAt() {
         return createdAt;
-    }
-
-    public void setEventId(String eventId) {
-        this.eventId = eventId;
-    }
-
-    public void setEventType(String eventType) {
-        this.eventType = eventType;
-    }
-
-    public void setCreatedAt(String createdAt) {
-        this.createdAt = createdAt;
     }
 }

@@ -1,10 +1,5 @@
 package com.ecommerce.shared.event;
 
-import java.time.Instant;
-
-import lombok.NoArgsConstructor;
-
-@NoArgsConstructor
 public class OrderCancelledEvent extends Event {
 
     private String orderId;
@@ -14,18 +9,12 @@ public class OrderCancelledEvent extends Event {
     private String status;
 
     public OrderCancelledEvent(
-            String eventId,
             String orderId,
             String userId,
             String productId,
             Integer quantity,
-            String status
-    ) {
-        super(
-                eventId,
-                "ORDER_CANCELLED",
-                Instant.now().toString()
-        );
+            String status) {
+        super(EventType.ORDER_CANCELLED);
 
         this.orderId = orderId;
         this.userId = userId;

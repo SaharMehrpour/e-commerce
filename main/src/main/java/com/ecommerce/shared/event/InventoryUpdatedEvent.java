@@ -1,10 +1,5 @@
 package com.ecommerce.shared.event;
 
-import java.time.Instant;
-
-import lombok.NoArgsConstructor;
-
-@NoArgsConstructor
 public class InventoryUpdatedEvent  extends Event {
 
     private String productId;
@@ -12,16 +7,10 @@ public class InventoryUpdatedEvent  extends Event {
     private Integer reservedQuantity;
 
     public InventoryUpdatedEvent(
-            String eventId,
             String productId,
             Integer availableQuantity,
-            Integer reservedQuantity
-    ) {
-        super(
-                eventId,
-                "INVENTORY_UPDATED",
-                Instant.now().toString()
-        );
+            Integer reservedQuantity) {
+        super(EventType.INVENTORY_UPDATED);
 
         this.productId = productId;
         this.availableQuantity = availableQuantity;

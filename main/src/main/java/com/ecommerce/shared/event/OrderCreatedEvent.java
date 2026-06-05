@@ -1,10 +1,5 @@
 package com.ecommerce.shared.event;
 
-import java.time.Instant;
-
-import lombok.NoArgsConstructor;
-
-@NoArgsConstructor
 public class OrderCreatedEvent extends Event {
 
     private String orderId;
@@ -14,19 +9,12 @@ public class OrderCreatedEvent extends Event {
     private String status;
 
     public OrderCreatedEvent(
-            String eventId,
             String orderId,
             String userId,
             String productId,
             int quantity,
-            String status
-    ) {
-        super(
-                eventId,
-                "ORDER_CREATED",
-                Instant.now().toString()
-        );
-
+            String status) {
+        super(EventType.ORDER_CREATED);
         this.orderId = orderId;
         this.userId = userId;
         this.productId = productId;

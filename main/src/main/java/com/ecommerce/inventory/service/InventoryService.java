@@ -21,7 +21,6 @@ import com.ecommerce.shared.exception.InventoryNotFoundException;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class InventoryService {
@@ -53,7 +52,6 @@ public class InventoryService {
         item = inventoryRepository.save(item);
 
         kafkaProducer.sendInventoryUpdatedEvent(new InventoryUpdatedEvent(
-                UUID.randomUUID().toString(),
                 productId,
                 item.getAvailableQuantity(),
                 item.getReservedQuantity()));
@@ -75,7 +73,6 @@ public class InventoryService {
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> {
                     InventoryFailedEvent event = new InventoryFailedEvent(
-                            UUID.randomUUID().toString(),
                             "RESERVE_STOCK_FAILED",
                             "PRODUCT_NOT_FOUND");
                     event.setProductId(productId);
@@ -87,7 +84,6 @@ public class InventoryService {
 
         if (item.getAvailableQuantity() < quantity) {
             InventoryFailedEvent event = new InventoryFailedEvent(
-                    UUID.randomUUID().toString(),
                     "RESERVE_STOCK_FAILED",
                     "INSUFFICIENT_STOCK");
             event.setProductId(productId);
@@ -103,7 +99,6 @@ public class InventoryService {
         inventoryRepository.save(item);
 
         kafkaProducer.sendInventoryReservedEvent(new InventoryReservedEvent(
-                UUID.randomUUID().toString(),
                 productId,
                 quantity));
 
@@ -124,7 +119,6 @@ public class InventoryService {
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> {
                     InventoryFailedEvent event = new InventoryFailedEvent(
-                            UUID.randomUUID().toString(),
                             "DEDUCT_STOCK_FAILED",
                             "PRODUCT_NOT_FOUND");
                     event.setProductId(productId);
@@ -144,7 +138,6 @@ public class InventoryService {
         item = inventoryRepository.save(item);
 
         kafkaProducer.sendInventoryUpdatedEvent(new InventoryUpdatedEvent(
-                UUID.randomUUID().toString(),
                 productId,
                 item.getAvailableQuantity(),
                 item.getReservedQuantity()));
@@ -166,7 +159,6 @@ public class InventoryService {
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> {
                     InventoryFailedEvent event = new InventoryFailedEvent(
-                            UUID.randomUUID().toString(),
                             "RELEASE_STOCK_FAILED",
                             "PRODUCT_NOT_FOUND");
                     event.setProductId(productId);
@@ -188,7 +180,6 @@ public class InventoryService {
         inventoryRepository.save(item);
 
         kafkaProducer.sendInventoryRestoredEvent(new InventoryRestoredEvent(
-                UUID.randomUUID().toString(),
                 productId,
                 quantity));
 

@@ -10,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ecommerce.inventory.dto.InventoryRequest;
 import com.ecommerce.inventory.service.InventoryService;
@@ -34,9 +35,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderCreatedShouldReserveStock() {
-        OrderCreatedEvent event = new OrderCreatedEvent(
-            "event-1", "o1", "u1", "p1", 5, "CREATED"
-        );
+        OrderCreatedEvent event = new OrderCreatedEvent("o1", "u1", "p1", 5, "CREATED");
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(false);
 
@@ -55,9 +55,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderCreatedShouldSkipIfAlreadyProcessed() {
-        OrderCreatedEvent event = new OrderCreatedEvent(
-                "event-1", "o1", "u1", "p1", 5, "CREATED"
-        );
+        OrderCreatedEvent event = new OrderCreatedEvent("o1", "u1", "p1", 5, "CREATED");
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(true);
 
@@ -69,9 +68,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderCancelledShouldReleaseStock() {
-        OrderCancelledEvent event = new OrderCancelledEvent(
-            "event-1", "o1", "u1", "p1", 3, "CANCELLED"
-        );
+        OrderCancelledEvent event = new OrderCancelledEvent("o1", "u1", "p1", 3, "CANCELLED");
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(false);
 
@@ -91,9 +89,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderCancelledShouldSkipIfAlreadyProcessed() {
-        OrderCancelledEvent event = new OrderCancelledEvent(
-            "event-1", "o1", "u1", "p1", 3, "CANCELLED"
-        );
+        OrderCancelledEvent event = new OrderCancelledEvent("o1", "u1", "p1", 3, "CANCELLED");
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(true);
 
@@ -105,14 +102,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderUpdatedShouldSkipIfAlreadyProcessed() {
-        OrderUpdatedEvent event = new OrderUpdatedEvent(
-                "event-1",
-                "o1",
-                "p1",
-                5,
-                "p1",
-                5
-        );
+        OrderUpdatedEvent event = new OrderUpdatedEvent("o1", "p1", 5, "p1", 5);
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(true);
 
@@ -124,14 +115,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderUpdatedShouldReleaseOldAndReserveNewWhenProductIdsDiffer() {
-        OrderUpdatedEvent event = new OrderUpdatedEvent(
-                "event-1",
-                "o1",
-                "old-p1",
-                2,
-                "new-p2",
-                4
-        );
+        OrderUpdatedEvent event = new OrderUpdatedEvent("o1", "old-p1", 2, "new-p2", 4);
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(false);
 
@@ -158,14 +143,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderUpdatedShouldOnlyReserveNewWhenProductIdsAreSame() {
-        OrderUpdatedEvent event = new OrderUpdatedEvent(
-                "event-1",
-                "o1",
-                "p1",
-                2,
-                "p1",
-                4
-        );
+        OrderUpdatedEvent event = new OrderUpdatedEvent("o1", "p1", 2, "p1", 4);
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(false);
 
@@ -186,14 +165,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderUpdatedShouldReleaseDeltaWhenSameProductQuantityDecreases() {
-        OrderUpdatedEvent event = new OrderUpdatedEvent(
-                "event-1",
-                "o1",
-                "p1",
-                5,
-                "p1",
-                2
-        );
+        OrderUpdatedEvent event = new OrderUpdatedEvent("o1", "p1", 5, "p1", 2);
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(false);
 
@@ -214,14 +187,8 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderUpdatedShouldDoNothingWhenSameProductQuantityUnchanged() {
-        OrderUpdatedEvent event = new OrderUpdatedEvent(
-                "event-1",
-                "o1",
-                "p1",
-                5,
-                "p1",
-                5
-        );
+        OrderUpdatedEvent event = new OrderUpdatedEvent("o1", "p1", 5, "p1", 5);
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(false);
 

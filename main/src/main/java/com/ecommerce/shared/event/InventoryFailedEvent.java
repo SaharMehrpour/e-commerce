@@ -1,29 +1,18 @@
 package com.ecommerce.shared.event;
 
-import java.time.Instant;
-
-import lombok.NoArgsConstructor;
-
-@NoArgsConstructor
 public class InventoryFailedEvent extends Event {
 
     private String orderId;
     private String productId;
     private Integer quantity;
-            
+
     private String failedAction;
     private String failureReason;
 
     public InventoryFailedEvent(
-            String eventId,
             String failedAction,
-            String failureReason
-    ) {
-        super(
-                eventId,
-                "INVENTORY_FAILED",
-                Instant.now().toString()
-        );
+            String failureReason) {
+        super(EventType.INVENTORY_FAILED);
 
         this.failedAction = failedAction;
         this.failureReason = failureReason;
@@ -52,7 +41,7 @@ public class InventoryFailedEvent extends Event {
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
     }
-    
+
     public String getFailedAction() {
         return failedAction;
     }

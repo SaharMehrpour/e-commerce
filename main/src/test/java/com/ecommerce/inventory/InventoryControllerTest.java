@@ -7,7 +7,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.ecommerce.dto.InventoryRequest;
+import com.ecommerce.inventory.controller.InventoryController;
+import com.ecommerce.inventory.domain.InventoryItem;
+import com.ecommerce.inventory.dto.InventoryRequest;
+import com.ecommerce.inventory.service.InventoryService;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;

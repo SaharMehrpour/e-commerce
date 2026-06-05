@@ -7,10 +7,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import com.ecommerce.event.InventoryFailedEvent;
-import com.ecommerce.event.InventoryReservedEvent;
-import com.ecommerce.event.InventoryRestoredEvent;
-import com.ecommerce.event.InventoryUpdatedEvent;
+import com.ecommerce.inventory.messaging.InventoryEventProducer;
+import com.ecommerce.shared.event.InventoryFailedEvent;
+import com.ecommerce.shared.event.InventoryReservedEvent;
+import com.ecommerce.shared.event.InventoryRestoredEvent;
+import com.ecommerce.shared.event.InventoryUpdatedEvent;
 
 public class InventoryEventProducerTest {
 

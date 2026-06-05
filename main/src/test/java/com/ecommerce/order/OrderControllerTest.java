@@ -9,8 +9,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.ecommerce.dto.CreateOrderRequest;
-import com.ecommerce.dto.UpdateOrderRequest;
+import com.ecommerce.order.controller.OrderController;
+import com.ecommerce.order.domain.Order;
+import com.ecommerce.order.dto.CreateOrderRequest;
+import com.ecommerce.order.dto.UpdateOrderRequest;
+import com.ecommerce.order.service.OrderService;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;

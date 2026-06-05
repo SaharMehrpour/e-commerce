@@ -11,13 +11,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.ecommerce.dto.InventoryRequest;
-import com.ecommerce.event.OrderCancelledEvent;
-import com.ecommerce.event.OrderCreatedEvent;
-import com.ecommerce.event.OrderUpdatedEvent;
-import com.ecommerce.inventory.InventoryService;
-import com.ecommerce.kafka.idempotency.ProcessedEvent;
-import com.ecommerce.kafka.idempotency.ProcessedEventRepository;
+import com.ecommerce.inventory.dto.InventoryRequest;
+import com.ecommerce.inventory.service.InventoryService;
+import com.ecommerce.order.messaging.OrderEventConsumer;
+import com.ecommerce.shared.event.OrderCancelledEvent;
+import com.ecommerce.shared.event.OrderCreatedEvent;
+import com.ecommerce.shared.event.OrderUpdatedEvent;
+import com.ecommerce.shared.idempotency.ProcessedEvent;
+import com.ecommerce.shared.idempotency.ProcessedEventRepository;
 
 @ExtendWith(MockitoExtension.class)
 class OrderEventConsumerTest {

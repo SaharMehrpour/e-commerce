@@ -4,6 +4,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import com.ecommerce.shared.exception.GlobalExceptionHandler;
+import com.ecommerce.shared.exception.InvalidOrderException;
+import com.ecommerce.shared.exception.InventoryNotEnoughException;
+import com.ecommerce.shared.exception.InventoryNotFoundException;
+import com.ecommerce.shared.exception.OrderAlreadyCancelledException;
+import com.ecommerce.shared.exception.OrderNotFoundException;
+import com.ecommerce.shared.exception.OrderNotUpdatableException;
+
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;

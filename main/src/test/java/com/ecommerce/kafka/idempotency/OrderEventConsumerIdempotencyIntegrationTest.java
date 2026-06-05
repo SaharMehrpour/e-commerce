@@ -13,12 +13,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import com.ecommerce.dto.InventoryRequest;
-import com.ecommerce.event.OrderCancelledEvent;
-import com.ecommerce.event.OrderCreatedEvent;
-import com.ecommerce.event.OrderUpdatedEvent;
-import com.ecommerce.inventory.InventoryService;
-import com.ecommerce.kafka.consumer.OrderEventConsumer;
+import com.ecommerce.inventory.dto.InventoryRequest;
+import com.ecommerce.inventory.service.InventoryService;
+import com.ecommerce.order.messaging.OrderEventConsumer;
+import com.ecommerce.shared.event.OrderCancelledEvent;
+import com.ecommerce.shared.event.OrderCreatedEvent;
+import com.ecommerce.shared.event.OrderUpdatedEvent;
+import com.ecommerce.shared.idempotency.ProcessedEventRepository;
 
 @SpringBootTest
 class OrderEventConsumerIdempotencyIntegrationTest {

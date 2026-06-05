@@ -1,8 +1,9 @@
 package com.ecommerce.kafka.producer;
 
-import com.ecommerce.event.OrderCancelledEvent;
-import com.ecommerce.event.OrderCreatedEvent;
-import com.ecommerce.event.OrderUpdatedEvent;
+import com.ecommerce.order.messaging.OrderEventProducer;
+import com.ecommerce.shared.event.OrderCancelledEvent;
+import com.ecommerce.shared.event.OrderCreatedEvent;
+import com.ecommerce.shared.event.OrderUpdatedEvent;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

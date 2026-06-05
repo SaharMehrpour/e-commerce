@@ -1,5 +1,6 @@
 package com.ecommerce.kafka.producer;
 
+import com.ecommerce.order.domain.OrderStatus;
 import com.ecommerce.order.messaging.OrderEventProducer;
 import com.ecommerce.shared.event.OrderCancelledEvent;
 import com.ecommerce.shared.event.OrderCreatedEvent;
@@ -32,7 +33,7 @@ class OrderEventProducerTest {
 	@Test
 	void shouldSendOrderCreatedEvent() {
 
-		OrderCreatedEvent event = new OrderCreatedEvent("order-1", "u1", "p1", 2, "CREATED");
+		OrderCreatedEvent event = new OrderCreatedEvent("order-1", "u1", "p1", 2, OrderStatus.CREATED);
 		ReflectionTestUtils.setField(event, "eventId", "event-1");
 
 		producer.sendOrderCreatedEvent(event);
@@ -46,7 +47,7 @@ class OrderEventProducerTest {
 	@Test
 	void shouldSendOrderCancelledEvent() {
 
-		OrderCancelledEvent event = new OrderCancelledEvent("order-1", "u1", "p1", 2, "CANCELLED");
+		OrderCancelledEvent event = new OrderCancelledEvent("order-1", "u1", "p1", 2, OrderStatus.CANCELLED);
 		ReflectionTestUtils.setField(event, "eventId", "event-2");
 
 		producer.sendOrderCancelledEvent(event);

@@ -12,6 +12,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.ecommerce.inventory.dto.InventoryResponse;
 import com.ecommerce.order.domain.Order;
+import com.ecommerce.order.domain.OrderStatus;
 import com.ecommerce.order.dto.CreateOrderRequest;
 import com.ecommerce.order.dto.UpdateOrderRequest;
 import com.ecommerce.order.messaging.OrderEventProducer;
@@ -84,7 +85,7 @@ public class OrderService {
         order.setUserId(request.getUserId());
         order.setProductId(request.getProductId());
         order.setQuantity(request.getQuantity());
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
         Order savedOrder = repository.save(order);
 
         OrderCreatedEvent event = new OrderCreatedEvent(
@@ -129,14 +130,14 @@ public class OrderService {
                         new OrderNotFoundException("Order not found with id: " + id)
                 );
 
-        if ("CANCELLED".equals(order.getStatus())) {
+        if (OrderStatus.CANCELLED.equals(order.getStatus())) {
             throw new OrderAlreadyCancelledException("Order is already cancelled");
         }
 
         String productId = order.getProductId();
         Integer quantity = order.getQuantity();
 
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED);
 
         Order updatedOrder = repository.save(order);
 
@@ -178,7 +179,7 @@ public class OrderService {
                     )
             );
 
-        if ("CANCELLED".equals(order.getStatus())) {
+        if (OrderStatus.CANCELLED.equals(order.getStatus())) {
             throw new OrderNotUpdatableException(
                     "Cannot update a cancelled order"
             );

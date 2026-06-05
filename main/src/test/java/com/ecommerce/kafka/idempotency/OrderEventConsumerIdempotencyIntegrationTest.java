@@ -16,6 +16,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ecommerce.inventory.dto.InventoryRequest;
 import com.ecommerce.inventory.service.InventoryService;
+import com.ecommerce.order.domain.OrderStatus;
 import com.ecommerce.order.messaging.OrderEventConsumer;
 import com.ecommerce.shared.event.OrderCancelledEvent;
 import com.ecommerce.shared.event.OrderCreatedEvent;
@@ -43,7 +44,7 @@ class OrderEventConsumerIdempotencyIntegrationTest {
     @Test
     void shouldProcessEventOnlyOnce_whenDuplicateEventArrives() {
 
-        OrderCreatedEvent event = new OrderCreatedEvent("order-1", "user-1", "product-1", 2, "CREATED");
+        OrderCreatedEvent event = new OrderCreatedEvent("order-1", "user-1", "product-1", 2, OrderStatus.CREATED);
         ReflectionTestUtils.setField(event, "eventId", "event-123");
 
 
@@ -59,7 +60,7 @@ class OrderEventConsumerIdempotencyIntegrationTest {
     @Test
     void shouldProcessCancelEventOnlyOnce_whenDuplicateEventArrives() {
 
-        OrderCancelledEvent event = new OrderCancelledEvent("order-1", "user-1", "product-1", 3, "CANCELLED");
+        OrderCancelledEvent event = new OrderCancelledEvent("order-1", "user-1", "product-1", 3, OrderStatus.CANCELLED);
         ReflectionTestUtils.setField(event, "eventId", "event-456");
 
         orderEventConsumer.handleOrderCancelled(event);

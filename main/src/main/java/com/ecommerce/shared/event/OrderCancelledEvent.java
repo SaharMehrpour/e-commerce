@@ -1,19 +1,21 @@
 package com.ecommerce.shared.event;
 
+import com.ecommerce.order.domain.OrderStatus;
+
 public class OrderCancelledEvent extends Event {
 
     private String orderId;
     private String userId;
     private String productId;
     private Integer quantity;
-    private String status;
+    private OrderStatus status;
 
     public OrderCancelledEvent(
             String orderId,
             String userId,
             String productId,
             Integer quantity,
-            String status) {
+            OrderStatus status) {
         super(EventType.ORDER_CANCELLED);
 
         this.orderId = orderId;
@@ -39,7 +41,7 @@ public class OrderCancelledEvent extends Event {
         return quantity;
     }
     
-    public String getStatus() {
+    public OrderStatus getStatus() {
         return status;
     }
 }

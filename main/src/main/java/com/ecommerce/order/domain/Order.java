@@ -18,7 +18,7 @@ public class Order implements Serializable {
     private String userId;
     private String productId;
     private int quantity;
-    private String status;
+    private OrderStatus status;
 
     public Order(String userId, String productId, int quantity) {
         this.userId = userId;
@@ -58,11 +58,11 @@ public class Order implements Serializable {
         this.quantity = quantity;
     }
 
-    public String getStatus() {
+    public OrderStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(OrderStatus status) {
         this.status = status;
     }
 }

@@ -14,6 +14,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ecommerce.inventory.dto.InventoryRequest;
 import com.ecommerce.inventory.service.InventoryService;
+import com.ecommerce.order.domain.OrderStatus;
 import com.ecommerce.order.messaging.OrderEventConsumer;
 import com.ecommerce.shared.event.OrderCancelledEvent;
 import com.ecommerce.shared.event.OrderCreatedEvent;
@@ -35,7 +36,7 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderCreatedShouldReserveStock() {
-        OrderCreatedEvent event = new OrderCreatedEvent("o1", "u1", "p1", 5, "CREATED");
+        OrderCreatedEvent event = new OrderCreatedEvent("o1", "u1", "p1", 5, OrderStatus.CREATED);
         ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(false);
@@ -55,7 +56,7 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderCreatedShouldSkipIfAlreadyProcessed() {
-        OrderCreatedEvent event = new OrderCreatedEvent("o1", "u1", "p1", 5, "CREATED");
+        OrderCreatedEvent event = new OrderCreatedEvent("o1", "u1", "p1", 5, OrderStatus.CREATED);
         ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(true);
@@ -68,7 +69,7 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderCancelledShouldReleaseStock() {
-        OrderCancelledEvent event = new OrderCancelledEvent("o1", "u1", "p1", 3, "CANCELLED");
+        OrderCancelledEvent event = new OrderCancelledEvent("o1", "u1", "p1", 3, OrderStatus.CANCELLED);
         ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(false);
@@ -89,7 +90,7 @@ class OrderEventConsumerTest {
 
     @Test
     void handleOrderCancelledShouldSkipIfAlreadyProcessed() {
-        OrderCancelledEvent event = new OrderCancelledEvent("o1", "u1", "p1", 3, "CANCELLED");
+        OrderCancelledEvent event = new OrderCancelledEvent("o1", "u1", "p1", 3, OrderStatus.CANCELLED);
         ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         when(processedEventRepository.existsById("event-1")).thenReturn(true);

@@ -1,19 +1,21 @@
 package com.ecommerce.shared.event;
 
+import com.ecommerce.order.domain.OrderStatus;
+
 public class OrderCreatedEvent extends Event {
 
     private String orderId;
     private String userId;
     private String productId;
     private int quantity;
-    private String status;
+    private OrderStatus status;
 
     public OrderCreatedEvent(
             String orderId,
             String userId,
             String productId,
             int quantity,
-            String status) {
+            OrderStatus status) {
         super(EventType.ORDER_CREATED);
         this.orderId = orderId;
         this.userId = userId;
@@ -38,7 +40,7 @@ public class OrderCreatedEvent extends Event {
         return quantity;
     }
 
-    public String getStatus() {
+    public OrderStatus getStatus() {
         return status;
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.ecommerce.order.controller.OrderController;
 import com.ecommerce.order.domain.Order;
+import com.ecommerce.order.domain.OrderStatus;
 import com.ecommerce.order.dto.CreateOrderRequest;
 import com.ecommerce.order.dto.UpdateOrderRequest;
 import com.ecommerce.order.service.OrderService;
@@ -42,7 +43,7 @@ public class OrderControllerTest {
     @Test
     void shouldCreateOrder() throws Exception {
         Order createdOrder = new Order("u1", "p1", 2);
-        createdOrder.setStatus("CREATED");
+        createdOrder.setStatus(OrderStatus.CREATED);
 
         orderService.orderToCreate = createdOrder;
 
@@ -61,7 +62,7 @@ public class OrderControllerTest {
                 .andExpect(jsonPath("$.userId").value("u1"))
                 .andExpect(jsonPath("$.productId").value("p1"))
                 .andExpect(jsonPath("$.quantity").value(2))
-                .andExpect(jsonPath("$.status").value("CREATED"));
+                .andExpect(jsonPath("$.status").value(OrderStatus.CREATED.name()));
     }
 
     @Test
@@ -71,8 +72,8 @@ public class OrderControllerTest {
             new Order("u2", "p2", 5)
         );
 
-        mockOrders.get(0).setStatus("CREATED");
-        mockOrders.get(1).setStatus("CREATED");
+        mockOrders.get(0).setStatus(OrderStatus.CREATED);
+        mockOrders.get(1).setStatus(OrderStatus.CREATED);
 
         orderService.orders = mockOrders;
 
@@ -82,17 +83,17 @@ public class OrderControllerTest {
                 .andExpect(jsonPath("$[0].userId").value("u1"))
                 .andExpect(jsonPath("$[0].productId").value("p1"))
                 .andExpect(jsonPath("$[0].quantity").value(2))
-                .andExpect(jsonPath("$[0].status").value("CREATED"))
+                .andExpect(jsonPath("$[0].status").value(OrderStatus.CREATED.name()))
                 .andExpect(jsonPath("$[1].userId").value("u2"))
                 .andExpect(jsonPath("$[1].productId").value("p2"))
                 .andExpect(jsonPath("$[1].quantity").value(5))
-                .andExpect(jsonPath("$[1].status").value("CREATED"));
+                .andExpect(jsonPath("$[1].status").value(OrderStatus.CREATED.name()));
     }
 
     @Test
     void shouldReturnOrderWhenFound() throws Exception {
         Order order = new Order("u1", "p1", 2);
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         orderService.order = Optional.of(order);
 
@@ -101,7 +102,7 @@ public class OrderControllerTest {
             .andExpect(jsonPath("$.userId").value("u1"))
             .andExpect(jsonPath("$.productId").value("p1"))
             .andExpect(jsonPath("$.quantity").value(2))
-            .andExpect(jsonPath("$.status").value("CREATED"));
+            .andExpect(jsonPath("$.status").value(OrderStatus.CREATED.name()));
 
     }
 
@@ -116,7 +117,7 @@ public class OrderControllerTest {
     @Test
     void shouldCancelOrderWhenFound() throws Exception {
         Order order = new Order("u1", "p1", 2);
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         orderService.order = Optional.of(order);
 
@@ -125,7 +126,7 @@ public class OrderControllerTest {
             .andExpect(jsonPath("$.userId").value("u1"))
             .andExpect(jsonPath("$.productId").value("p1"))
             .andExpect(jsonPath("$.quantity").value(2))
-            .andExpect(jsonPath("$.status").value("CANCELLED"));
+            .andExpect(jsonPath("$.status").value(OrderStatus.CANCELLED.name()));
 
     }
 
@@ -141,7 +142,7 @@ public class OrderControllerTest {
     void shouldUpdateOrderFields() throws Exception {
 
         Order order = new Order("u1", "updated-product", 10);
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         orderService.order = Optional.of(order);
 
@@ -159,7 +160,7 @@ public class OrderControllerTest {
                 .andExpect(jsonPath("$.userId").value("u1"))
                 .andExpect(jsonPath("$.productId").value("updated-product"))
                 .andExpect(jsonPath("$.quantity").value(10))
-                .andExpect(jsonPath("$.status").value("CREATED"));
+                .andExpect(jsonPath("$.status").value(OrderStatus.CREATED.name()));
     }
 
     @Test
@@ -215,7 +216,7 @@ public class OrderControllerTest {
 
         @Override
         public Optional<Order> cancelOrder(String id) {
-            order.ifPresent(o -> o.setStatus("CANCELLED"));
+            order.ifPresent(o -> o.setStatus(OrderStatus.CANCELLED));
             return order;
         }
 

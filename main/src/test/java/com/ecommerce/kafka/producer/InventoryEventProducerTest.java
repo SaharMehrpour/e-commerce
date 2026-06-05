@@ -6,11 +6,13 @@ import static org.mockito.Mockito.verify;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import com.ecommerce.event.InventoryFailedEvent;
-import com.ecommerce.event.InventoryReservedEvent;
-import com.ecommerce.event.InventoryRestoredEvent;
-import com.ecommerce.event.InventoryUpdatedEvent;
+import com.ecommerce.inventory.messaging.InventoryEventProducer;
+import com.ecommerce.shared.event.InventoryFailedEvent;
+import com.ecommerce.shared.event.InventoryReservedEvent;
+import com.ecommerce.shared.event.InventoryRestoredEvent;
+import com.ecommerce.shared.event.InventoryUpdatedEvent;
 
 public class InventoryEventProducerTest {
 
@@ -33,11 +35,8 @@ public class InventoryEventProducerTest {
 
     @Test
     void shouldSendInventoryReservedEvent() {
-        InventoryReservedEvent event = new InventoryReservedEvent(
-                "event-1",
-                "p1",
-                2
-            );
+        InventoryReservedEvent event = new InventoryReservedEvent("p1", 2);
+        ReflectionTestUtils.setField(event, "eventId", "event-1");
 
         producer.sendInventoryReservedEvent(event);
 
@@ -50,11 +49,8 @@ public class InventoryEventProducerTest {
 
     @Test
     void shouldSendInventoryRestoredEvent() {
-        InventoryRestoredEvent event = new InventoryRestoredEvent(
-                "event-2",
-                "p1",
-                2
-            );
+        InventoryRestoredEvent event = new InventoryRestoredEvent("p1", 2);
+        ReflectionTestUtils.setField(event, "eventId", "event-2");
 
         producer.sendInventoryRestoredEvent(event);
 
@@ -67,11 +63,8 @@ public class InventoryEventProducerTest {
 
     @Test
     void shouldSendInventoryFailedEvent() {
-        InventoryFailedEvent event = new InventoryFailedEvent(
-                "event-3",
-                "FAILED_ACTION",
-                "FAILURE_REASON"
-        );
+        InventoryFailedEvent event = new InventoryFailedEvent("FAILED_ACTION", "FAILURE_REASON");
+        ReflectionTestUtils.setField(event, "eventId", "event-3");
 
         producer.sendInventoryFailedEvent(event);
 
@@ -84,12 +77,8 @@ public class InventoryEventProducerTest {
 
     @Test
     void shouldSendInventoryUpdatedEvent() {
-        InventoryUpdatedEvent event = new InventoryUpdatedEvent(
-                "event-4",
-                "p1",
-                2,
-                3
-        );
+        InventoryUpdatedEvent event = new InventoryUpdatedEvent("p1", 2, 3);
+        ReflectionTestUtils.setField(event, "eventId", "event-4");
 
         producer.sendInventoryUpdatedEvent(event);
 

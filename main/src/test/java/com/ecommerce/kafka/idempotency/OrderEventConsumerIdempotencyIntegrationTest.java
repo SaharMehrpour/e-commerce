@@ -12,13 +12,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import com.ecommerce.dto.InventoryRequest;
-import com.ecommerce.event.OrderCancelledEvent;
-import com.ecommerce.event.OrderCreatedEvent;
-import com.ecommerce.event.OrderUpdatedEvent;
-import com.ecommerce.inventory.InventoryService;
-import com.ecommerce.kafka.consumer.OrderEventConsumer;
+import com.ecommerce.inventory.dto.InventoryRequest;
+import com.ecommerce.inventory.service.InventoryService;
+import com.ecommerce.order.domain.OrderStatus;
+import com.ecommerce.order.messaging.OrderEventConsumer;
+import com.ecommerce.shared.event.OrderCancelledEvent;
+import com.ecommerce.shared.event.OrderCreatedEvent;
+import com.ecommerce.shared.event.OrderUpdatedEvent;
+import com.ecommerce.shared.idempotency.ProcessedEventRepository;
 
 @SpringBootTest
 class OrderEventConsumerIdempotencyIntegrationTest {
@@ -41,14 +44,9 @@ class OrderEventConsumerIdempotencyIntegrationTest {
     @Test
     void shouldProcessEventOnlyOnce_whenDuplicateEventArrives() {
 
-        OrderCreatedEvent event = new OrderCreatedEvent(
-                "event-123",
-                "order-1",
-                "user-1",
-                "product-1",
-                2,
-                "CREATED"
-        );
+        OrderCreatedEvent event = new OrderCreatedEvent("order-1", "user-1", "product-1", 2, OrderStatus.CREATED);
+        ReflectionTestUtils.setField(event, "eventId", "event-123");
+
 
         orderEventConsumer.handleOrderCreated(event);
         orderEventConsumer.handleOrderCreated(event);
@@ -62,14 +60,8 @@ class OrderEventConsumerIdempotencyIntegrationTest {
     @Test
     void shouldProcessCancelEventOnlyOnce_whenDuplicateEventArrives() {
 
-        OrderCancelledEvent event = new OrderCancelledEvent(
-                "event-456",
-                "order-1",
-                "user-1",
-                "product-1",
-                3,
-                "CANCELLED"
-        );
+        OrderCancelledEvent event = new OrderCancelledEvent("order-1", "user-1", "product-1", 3, OrderStatus.CANCELLED);
+        ReflectionTestUtils.setField(event, "eventId", "event-456");
 
         orderEventConsumer.handleOrderCancelled(event);
         orderEventConsumer.handleOrderCancelled(event);
@@ -83,14 +75,8 @@ class OrderEventConsumerIdempotencyIntegrationTest {
     @Test
     void shouldProcessUpdateEventOnlyOnce_whenDuplicateEventArrives() {
 
-        OrderUpdatedEvent event = new OrderUpdatedEvent(
-                "event-789",
-                "order-1",
-                "product-1",
-                2,
-                "product-1",
-                5
-        );
+        OrderUpdatedEvent event = new OrderUpdatedEvent("order-1", "product-1", 2, "product-1", 5);
+        ReflectionTestUtils.setField(event, "eventId", "event-789");
 
         orderEventConsumer.handleOrderUpdated(event);
         orderEventConsumer.handleOrderUpdated(event);

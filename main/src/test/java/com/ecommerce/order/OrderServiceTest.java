@@ -9,17 +9,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import com.ecommerce.dto.CreateOrderRequest;
-import com.ecommerce.dto.InventoryResponse;
-import com.ecommerce.dto.UpdateOrderRequest;
-import com.ecommerce.event.*;
-import com.ecommerce.exception.InvalidOrderException;
-import com.ecommerce.exception.InventoryNotEnoughException;
-import com.ecommerce.exception.InventoryNotFoundException;
-import com.ecommerce.exception.OrderAlreadyCancelledException;
-import com.ecommerce.exception.OrderNotFoundException;
-import com.ecommerce.exception.OrderNotUpdatableException;
-import com.ecommerce.kafka.producer.OrderEventProducer;
+import com.ecommerce.inventory.dto.InventoryResponse;
+import com.ecommerce.order.domain.Order;
+import com.ecommerce.order.domain.OrderStatus;
+import com.ecommerce.order.dto.CreateOrderRequest;
+import com.ecommerce.order.dto.UpdateOrderRequest;
+import com.ecommerce.order.messaging.OrderEventProducer;
+import com.ecommerce.order.repository.OrderRepository;
+import com.ecommerce.order.service.OrderService;
+import com.ecommerce.shared.event.*;
+import com.ecommerce.shared.exception.InvalidOrderException;
+import com.ecommerce.shared.exception.InventoryNotEnoughException;
+import com.ecommerce.shared.exception.InventoryNotFoundException;
+import com.ecommerce.shared.exception.OrderAlreadyCancelledException;
+import com.ecommerce.shared.exception.OrderNotFoundException;
+import com.ecommerce.shared.exception.OrderNotUpdatableException;
 
 import java.util.List;
 import java.util.Optional;
@@ -65,7 +69,7 @@ class OrderServiceTest {
         mockSavedOrder.setUserId("u1");
         mockSavedOrder.setProductId("p1");
         mockSavedOrder.setQuantity(2);
-        mockSavedOrder.setStatus("CREATED");
+        mockSavedOrder.setStatus(OrderStatus.CREATED);
 
         when(restTemplate.getForObject(anyString(), eq(InventoryResponse.class)))
                 .thenReturn(mockInventory);
@@ -76,7 +80,7 @@ class OrderServiceTest {
 
         assertNotNull(createdOrder);
         assertEquals("order-1", createdOrder.getId());
-        assertEquals("CREATED", createdOrder.getStatus());
+        assertEquals(OrderStatus.CREATED, createdOrder.getStatus());
 
         verify(repository, times(1)).save(any(Order.class));
 
@@ -89,7 +93,7 @@ class OrderServiceTest {
         assertEquals("u1", sentEvent.getUserId());
         assertEquals("p1", sentEvent.getProductId());
         assertEquals(2, sentEvent.getQuantity());
-        assertEquals("CREATED", sentEvent.getStatus());
+        assertEquals(OrderStatus.CREATED, sentEvent.getStatus());
     }
 
     @Test
@@ -256,7 +260,7 @@ class OrderServiceTest {
     void cancelOrderShouldPersistCancelledStatus() {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
         when(repository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -265,7 +269,7 @@ class OrderServiceTest {
 
         assertTrue(cancelledOrder.isPresent());
         Order result = cancelledOrder.get();
-        assertEquals("CANCELLED", result.getStatus());
+        assertEquals(OrderStatus.CANCELLED, result.getStatus());
 
         verify(repository, times(1)).save(order);
 
@@ -277,7 +281,7 @@ class OrderServiceTest {
         assertEquals("u1", event.getUserId());
         assertEquals("p1", event.getProductId());
         assertEquals(2, event.getQuantity());
-        assertEquals("CANCELLED", event.getStatus());
+        assertEquals(OrderStatus.CANCELLED, event.getStatus());
     }
 
     @Test
@@ -298,7 +302,7 @@ class OrderServiceTest {
     void cancelOrderShouldThrowWhenOrderAlreadyCancelled() {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED);
 
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
 
@@ -316,7 +320,7 @@ class OrderServiceTest {
     void updateOrderShouldUpdateFields() {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
         when(repository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -360,7 +364,7 @@ class OrderServiceTest {
     void updateOrderShouldThrowWhenOrderCancelled() {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED);
 
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
 
@@ -381,7 +385,7 @@ class OrderServiceTest {
     void updateOrderShouldThrowWhenQuantityInvalid() {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
 
@@ -420,7 +424,7 @@ class OrderServiceTest {
     void updateOrderShouldNotThrowWhenNeitherFieldProvided() {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
         when(repository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -443,7 +447,7 @@ class OrderServiceTest {
     void updateOrderShouldUpdateOnlyQuantityWhenProductIdIsNull() {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
         when(repository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -465,7 +469,7 @@ class OrderServiceTest {
     void updateOrderShouldUpdateOnlyProductIdWhenQuantityIsNull() {
         Order order = new Order("u1", "p1", 2);
         order.setId("order-1");
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
         when(repository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));

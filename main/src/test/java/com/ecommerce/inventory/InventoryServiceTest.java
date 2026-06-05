@@ -15,11 +15,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.ecommerce.dto.InventoryRequest;
-import com.ecommerce.exception.InvalidInventoryException;
-import com.ecommerce.exception.InventoryNotEnoughException;
-import com.ecommerce.exception.InventoryNotFoundException;
-import com.ecommerce.kafka.producer.InventoryEventProducer;
+import com.ecommerce.inventory.domain.InventoryItem;
+import com.ecommerce.inventory.dto.InventoryRequest;
+import com.ecommerce.inventory.messaging.InventoryEventProducer;
+import com.ecommerce.inventory.repository.InventoryRepository;
+import com.ecommerce.inventory.service.InventoryService;
+import com.ecommerce.shared.exception.InvalidInventoryException;
+import com.ecommerce.shared.exception.InventoryNotEnoughException;
+import com.ecommerce.shared.exception.InventoryNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 public class InventoryServiceTest {

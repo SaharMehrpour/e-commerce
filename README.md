@@ -77,6 +77,8 @@ npm run test
 
 ## 🐳 Running the Project
 
+This application is containerized. Please ensure you have **Docker** installed on your machine before proceeding.
+
 Instead of running services manually, you can use the provided scripts.
 
 ### 🚀 Start the application
@@ -84,20 +86,7 @@ Instead of running services manually, you can use the provided scripts.
 ./start.sh
 ```
 
-This script will:
-
-- Start all infrastructure services using Docker Compose (`docker-compose up -d`):
-    - Kafka
-    - ZooKeeper
-    - MongoDB
-    - PostgreSQL
-    - Redis
-- Build and run the Spring Boot backend:
-    - `./mvnw clean install`
-    - `./mvnw spring-boot:run`
-- Install and start the React frontend:
-    - `npm install`
-    - `npm run dev`
+Run the following script to spin up the Docker containers (via `main/docker-compose.yaml`):
 
 After running, the system will be available at:
 
@@ -109,11 +98,7 @@ After running, the system will be available at:
 ./stop.sh
 ```
 
-This script will:
-
-- Stop all Docker containers (Kafka, MongoDB, Redis, ZooKeeper, PostgreSQL)
-- Stop any running backend process
-- Stop the frontend development server (if running in background)
+This script will stop the app and remove Docker containers
 
 ## 📡 API Endpoints
 
@@ -145,7 +130,6 @@ A Relational database acts as the source of truth for inventory data.
 
 ## 🔥 Future Improvements
 - Payment microservice (Kafka consumer)
-- Dockerize frontend
 - Kubernetes deployment (Minikube)
 - API Gateway
 - Authentication (JWT / OAuth2)

@@ -1,12 +1,17 @@
 services:
 
-  mongo:
+  mongodb:
     image: mongo:latest
-    container_name: ecommerce-mongo
+    container_name: ecommerce-mongodb
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -40,8 +45,8 @@ services:
 
   postgres-inventory:
     image: postgres:16
-    container_name: postgres-inventory
-    restart: always
+    container_name: ecommerce-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: inventory_db
       POSTGRES_USER: postgres
@@ -49,7 +54,49 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - inventory_pgdata:/var/lib/postgresql/data    
+      - inventory_pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+    container_name: ecommerce-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      postgres-inventory:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/ecommerce
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      POSTGRES_URL: jdbc:postgresql://postgres-inventory:5432/inventory_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+
+      KAFKA_SERVERS: kafka:29092
+
+      INVENTORY_SERVICE_URL: http://backend:8080/inventory
+
+  frontend:
+    build:
+      context: ../frontend
+    container_name: ecommerce-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8080
 
 volumes:
   mongo-data:

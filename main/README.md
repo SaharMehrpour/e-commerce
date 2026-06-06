@@ -7,10 +7,15 @@
 
 1. Stop and remove all three containers
 ```bash
-docker rm -f postgres-inventory ecommerce-mongo ecommerce-redis
+docker rm -f postgres-inventory ecommerce-mongodb ecommerce-redis
 ```
 
 2. Delete all three data volumes
 ```bash
 docker volume rm main_inventory_pgdata main_mongo-data main_redis-data
+```
+
+### Run the app
+```bash
+docker compose up --build
 ```

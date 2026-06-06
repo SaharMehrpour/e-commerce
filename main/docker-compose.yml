@@ -1,8 +1,8 @@
 services:
 
-  mongo:
+  mongodb:
     image: mongo:latest
-    container_name: ecommerce-mongo
+    container_name: ecommerce-mongodb
     ports:
       - "27017:27017"
     volumes:
@@ -50,6 +50,35 @@ services:
       - "5432:5432"
     volumes:
       - inventory_pgdata:/var/lib/postgresql/data    
+
+  backend:
+    build:
+      context: .
+    container_name: ecommerce-backend
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      postgres-inventory:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_MONGODB_URI: mongodb://mongodb:27017/ecommerce
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      POSTGRES_URL: jdbc:postgresql://postgres-inventory:5432/inventory_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+
+      KAFKA_SERVERS: kafka:29092
+
+      INVENTORY_SERVICE_URL: http://backend:8080/inventory
 
 volumes:
   mongo-data:

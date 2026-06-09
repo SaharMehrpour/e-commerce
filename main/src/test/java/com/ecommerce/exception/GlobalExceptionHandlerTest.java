@@ -1,10 +1,14 @@
 package com.ecommerce.exception;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import com.ecommerce.shared.exception.GlobalExceptionHandler;
+import com.ecommerce.shared.exception.InvalidInventoryException;
 import com.ecommerce.shared.exception.InvalidOrderException;
 import com.ecommerce.shared.exception.InventoryNotEnoughException;
 import com.ecommerce.shared.exception.InventoryNotFoundException;
@@ -15,20 +19,18 @@ import com.ecommerce.shared.exception.OrderNotUpdatableException;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class GlobalExceptionHandlerTest {
 
-    private final GlobalExceptionHandler handler =
-            new GlobalExceptionHandler();
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
     void shouldHandleOrderNotFoundException() {
 
-        OrderNotFoundException ex =
-                new OrderNotFoundException("Order not found");
+        OrderNotFoundException ex = new OrderNotFoundException("Order not found");
 
-        ResponseEntity<?> response =
-                handler.handleOrderNotFoundException(ex);
+        ResponseEntity<?> response = handler.handleOrderNotFoundException(ex);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
 
@@ -42,11 +44,9 @@ class GlobalExceptionHandlerTest {
     @Test
     void shouldHandleOrderAlreadyCancelledException() {
 
-        OrderAlreadyCancelledException ex =
-                new OrderAlreadyCancelledException("Already cancelled");
+        OrderAlreadyCancelledException ex = new OrderAlreadyCancelledException("Already cancelled");
 
-        ResponseEntity<?> response =
-                handler.handleOrderAlreadyCancelledException(ex);
+        ResponseEntity<?> response = handler.handleOrderAlreadyCancelledException(ex);
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
 
@@ -60,11 +60,9 @@ class GlobalExceptionHandlerTest {
     @Test
     void shouldHandleInvalidOrderException() {
 
-        InvalidOrderException ex =
-                new InvalidOrderException("Invalid quantity");
+        InvalidOrderException ex = new InvalidOrderException("Invalid quantity");
 
-        ResponseEntity<?> response =
-                handler.handleInvalidOrderException(ex);
+        ResponseEntity<?> response = handler.handleInvalidOrderException(ex);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
 
@@ -78,11 +76,9 @@ class GlobalExceptionHandlerTest {
     @Test
     void shouldHandleOrderNotUpdatableException() {
 
-        OrderNotUpdatableException ex =
-                new OrderNotUpdatableException("Cannot update order");
+        OrderNotUpdatableException ex = new OrderNotUpdatableException("Cannot update order");
 
-        ResponseEntity<?> response =
-                handler.handleOrderNotUpdatableException(ex);
+        ResponseEntity<?> response = handler.handleOrderNotUpdatableException(ex);
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
 
@@ -94,12 +90,42 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldHandleInventoryNotFoundException() {
-        InventoryNotFoundException ex =
-                new InventoryNotFoundException("Inventory not found");
+    void shouldHandleInvalidInventoryException() throws Exception {
+        InvalidInventoryException ex = new InvalidInventoryException("Invalid request");
 
-        ResponseEntity<?> response =
-                handler.handleInventoryNotFoundException(ex);
+        ResponseEntity<?> response = handler.handleInvalidInventoryException(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+
+        assertEquals("Invalid Inventory Request", body.get("error"));
+        assertEquals("Invalid request", body.get("message"));
+        assertNotNull(body.get("timestamp"));
+    }
+
+    @Test
+    void shouldHandleValidationException() throws Exception {
+        MethodParameter parameter = mock(MethodParameter.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+        MethodArgumentNotValidException ex = new MethodArgumentNotValidException(parameter, bindingResult);
+
+        ResponseEntity<?> response = handler.handleValidationException(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+
+        Map<?, ?> body = (Map<?, ?>) response.getBody();
+
+        assertEquals("Validation Failed", body.get("error"));
+        assertEquals("Request validation failed", body.get("message"));
+        assertNotNull(body.get("timestamp"));
+    }
+
+    @Test
+    void shouldHandleInventoryNotFoundException() {
+        InventoryNotFoundException ex = new InventoryNotFoundException("Inventory not found");
+
+        ResponseEntity<?> response = handler.handleInventoryNotFoundException(ex);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
 
@@ -113,14 +139,13 @@ class GlobalExceptionHandlerTest {
     @Test
     void shouldHandleInventoryNotEnoughException() {
         InventoryNotEnoughException ex = new InventoryNotEnoughException("Not enough inventory");
-        
-        ResponseEntity<?> response =
-                handler.handleInventoryNotEnoughException(ex);
-        
+
+        ResponseEntity<?> response = handler.handleInventoryNotEnoughException(ex);
+
         assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
-        
+
         Map<?, ?> body = (Map<?, ?>) response.getBody();
-        
+
         assertEquals("Insufficient Stock", body.get("error"));
         assertEquals("Not enough inventory", body.get("message"));
         assertNotNull(body.get("timestamp"));

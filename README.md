@@ -86,7 +86,7 @@ Instead of running services manually, you can use the provided scripts.
 ./start.sh
 ```
 
-Run the following script to spin up the Docker containers (via `main/docker-compose.yaml`):
+Run the following script to spin up the Docker containers (via `backend/docker-compose.yaml`):
 
 After running, the system will be available at:
 
@@ -104,8 +104,8 @@ This script will stop the app and remove Docker containers
 
 Implemented in:
 
-- `main/src/main/java/com/ecommerce/order/OrderController.java`
-- `main/src/main/java/com/ecommerce/inventory/InventoryController.java`
+- `backend/src/main/java/com/ecommerce/order/OrderController.java`
+- `backend/src/main/java/com/ecommerce/inventory/InventoryController.java`
 
 
 ## 📊 Metrics & Observability

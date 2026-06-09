@@ -108,6 +108,23 @@ Implemented in:
 - `main/src/main/java/com/ecommerce/inventory/InventoryController.java`
 
 
+## 📊 Metrics & Observability
+
+This project uses **Spring Boot Actuator** with Micrometer to expose application metrics to **Prometheus**. 
+It includes both default system metrics and custom business metrics (e.g., orders created/cancelled), 
+enabling real-time monitoring and dashboard visualization with tools like Grafana.
+
+
+The `/actuator/prometheus` endpoint:
+```
+http://localhost:8080/actuator/prometheus
+```
+
+Get the list of mertics via:
+```
+http://localhost:8080/actuator/metrics
+```
+
 ## 🧠 Key Design Decisions
 
 ***Event-Driven Architecture:***

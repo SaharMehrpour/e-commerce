@@ -9,9 +9,9 @@ import static org.mockito.Mockito.*;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,6 +24,9 @@ import com.ecommerce.shared.exception.InvalidInventoryException;
 import com.ecommerce.shared.exception.InventoryNotEnoughException;
 import com.ecommerce.shared.exception.InventoryNotFoundException;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 @ExtendWith(MockitoExtension.class)
 public class InventoryServiceTest {
 
@@ -33,8 +36,19 @@ public class InventoryServiceTest {
     @Mock
     private InventoryEventProducer kafkaProducer;
 
-    @InjectMocks
+    private MeterRegistry meterRegistry;
+
     private InventoryService inventoryService;
+
+    @BeforeEach
+    void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        inventoryService = new InventoryService(
+                inventoryRepository,
+                kafkaProducer,
+                meterRegistry
+        );
+    }
 
     @Test
     void addStockNewShouldBeAddedToInventory() {

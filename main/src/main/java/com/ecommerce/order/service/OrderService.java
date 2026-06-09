@@ -27,6 +27,9 @@ import com.ecommerce.shared.exception.OrderAlreadyCancelledException;
 import com.ecommerce.shared.exception.OrderNotFoundException;
 import com.ecommerce.shared.exception.OrderNotUpdatableException;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -37,14 +40,26 @@ public class OrderService {
     private final OrderEventProducer kafkaProducer;
     private final RestTemplate restTemplate;
 
+    private final Counter ordersCreatedCounter;
+    private final Counter ordersCancelledCounter;
+
     @Value("${inventory.service.url}")
     private String inventoryServiceUrl;
 
     public OrderService(OrderRepository repository, OrderEventProducer kafkaProducer,
-        RestTemplate restTemplate) {
+        RestTemplate restTemplate, MeterRegistry meterRegistry) {
         this.repository = repository;
         this.kafkaProducer = kafkaProducer;
         this.restTemplate = restTemplate;
+
+        this.ordersCreatedCounter = Counter.builder("orders.created")
+                .description("Total number of orders created")
+                .register(meterRegistry);
+
+        this.ordersCancelledCounter = Counter.builder("orders.cancelled")
+                .description("Total number of orders cancelled")
+                .register(meterRegistry);
+
     }
 
     @Caching(
@@ -87,6 +102,8 @@ public class OrderService {
         order.setQuantity(request.getQuantity());
         order.setStatus(OrderStatus.CREATED);
         Order savedOrder = repository.save(order);
+
+        ordersCreatedCounter.increment();
 
         OrderCreatedEvent event = new OrderCreatedEvent(
                 savedOrder.getId(),
@@ -140,6 +157,8 @@ public class OrderService {
         order.setStatus(OrderStatus.CANCELLED);
 
         Order updatedOrder = repository.save(order);
+
+        ordersCancelledCounter.increment();
 
         OrderCancelledEvent event =
                 new OrderCancelledEvent(

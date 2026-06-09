@@ -86,6 +86,17 @@ services:
 
       INVENTORY_SERVICE_URL: http://backend:8080/inventory
 
+  prometheus:
+    image: prom/prometheus
+    container_name: ecommerce-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - backend
+
   frontend:
     build:
       context: ../frontend

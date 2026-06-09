@@ -1,9 +1,9 @@
 package com.ecommerce.order;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.HttpClientErrorException;
@@ -24,6 +24,9 @@ import com.ecommerce.shared.exception.InventoryNotFoundException;
 import com.ecommerce.shared.exception.OrderAlreadyCancelledException;
 import com.ecommerce.shared.exception.OrderNotFoundException;
 import com.ecommerce.shared.exception.OrderNotUpdatableException;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.util.List;
 import java.util.Optional;
@@ -50,8 +53,20 @@ class OrderServiceTest {
     @Mock
     private RestTemplate restTemplate;
 
-    @InjectMocks
+    private MeterRegistry meterRegistry;
+
     private OrderService orderService;
+
+    @BeforeEach
+    void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
+        orderService = new OrderService(
+                repository,
+                kafkaProducer,
+                restTemplate,
+                meterRegistry
+        );
+    }
 
     @Test
     void createOrderShouldSaveOrderAndPublishEvent() {

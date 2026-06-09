@@ -19,6 +19,9 @@ import com.ecommerce.shared.exception.InvalidInventoryException;
 import com.ecommerce.shared.exception.InventoryNotEnoughException;
 import com.ecommerce.shared.exception.InventoryNotFoundException;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -28,10 +31,16 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final InventoryEventProducer kafkaProducer;
 
+    private final Counter inventoryUpdatedCounter;
+
     public InventoryService(InventoryRepository inventoryRepository,
-        InventoryEventProducer kafkaProducer) {
+        InventoryEventProducer kafkaProducer, MeterRegistry meterRegistry) {
         this.inventoryRepository = inventoryRepository;
         this.kafkaProducer = kafkaProducer;
+
+        this.inventoryUpdatedCounter = Counter.builder("inventory.updated")
+                .description("Total number of inventory updates (add, reserve, deduct release stock)")
+                .register(meterRegistry);
     }
 
     @Caching(
@@ -50,6 +59,8 @@ public class InventoryService {
 
         item.setAvailableQuantity(item.getAvailableQuantity() + quantity);
         item = inventoryRepository.save(item);
+
+        inventoryUpdatedCounter.increment();
 
         kafkaProducer.sendInventoryUpdatedEvent(new InventoryUpdatedEvent(
                 productId,
@@ -98,6 +109,8 @@ public class InventoryService {
 
         inventoryRepository.save(item);
 
+        inventoryUpdatedCounter.increment();
+
         kafkaProducer.sendInventoryReservedEvent(new InventoryReservedEvent(
                 productId,
                 quantity));
@@ -136,6 +149,8 @@ public class InventoryService {
 
         item.setReservedQuantity(item.getReservedQuantity() - quantity);
         item = inventoryRepository.save(item);
+
+        inventoryUpdatedCounter.increment();
 
         kafkaProducer.sendInventoryUpdatedEvent(new InventoryUpdatedEvent(
                 productId,
@@ -178,6 +193,8 @@ public class InventoryService {
         item.setReservedQuantity(item.getReservedQuantity() - quantity);
 
         inventoryRepository.save(item);
+
+        inventoryUpdatedCounter.increment();
 
         kafkaProducer.sendInventoryRestoredEvent(new InventoryRestoredEvent(
                 productId,

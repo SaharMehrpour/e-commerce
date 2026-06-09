@@ -1,12 +1,10 @@
 package com.ecommerce.order;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.ecommerce.order.controller.OrderController;
@@ -16,12 +14,13 @@ import com.ecommerce.order.dto.CreateOrderRequest;
 import com.ecommerce.order.dto.UpdateOrderRequest;
 import com.ecommerce.order.service.OrderService;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,21 +30,15 @@ public class OrderControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private TestOrderService orderService;
-
-    @BeforeEach
-    void setUp() {
-        orderService.orders = new ArrayList<>();
-        orderService.order = Optional.empty();
-    }
+    @MockitoBean
+    private OrderService orderService;
 
     @Test
     void shouldCreateOrder() throws Exception {
         Order createdOrder = new Order("u1", "p1", 2);
         createdOrder.setStatus(OrderStatus.CREATED);
 
-        orderService.orderToCreate = createdOrder;
+        when(orderService.createOrder(any(CreateOrderRequest.class))).thenReturn(createdOrder);
 
         String orderJson = """
             {
@@ -75,7 +68,7 @@ public class OrderControllerTest {
         mockOrders.get(0).setStatus(OrderStatus.CREATED);
         mockOrders.get(1).setStatus(OrderStatus.CREATED);
 
-        orderService.orders = mockOrders;
+        when(orderService.getOrders()).thenReturn(mockOrders);
 
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isOk())
@@ -95,7 +88,7 @@ public class OrderControllerTest {
         Order order = new Order("u1", "p1", 2);
         order.setStatus(OrderStatus.CREATED);
 
-        orderService.order = Optional.of(order);
+        when(orderService.getOrder(any(String.class))).thenReturn(Optional.of(order));
 
         mockMvc.perform(get("/orders/1"))
             .andExpect(status().isOk())
@@ -108,7 +101,7 @@ public class OrderControllerTest {
 
     @Test
     void shouldReturn404WhenNotFound() throws Exception {
-        orderService.order = Optional.empty();
+        when(orderService.getOrder(any(String.class))).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/orders/999"))
             .andExpect(status().isNotFound());
@@ -117,9 +110,9 @@ public class OrderControllerTest {
     @Test
     void shouldCancelOrderWhenFound() throws Exception {
         Order order = new Order("u1", "p1", 2);
-        order.setStatus(OrderStatus.CREATED);
+        order.setStatus(OrderStatus.CANCELLED);
 
-        orderService.order = Optional.of(order);
+        when(orderService.cancelOrder(any(String.class))).thenReturn(Optional.of(order));
 
         mockMvc.perform(patch("/orders/1/cancel"))
             .andExpect(status().isOk())
@@ -132,7 +125,7 @@ public class OrderControllerTest {
 
     @Test
     void shouldReturn404WhenCancelledOrderNotFound() throws Exception {
-        orderService.order = Optional.empty();
+        when(orderService.cancelOrder(any(String.class))).thenReturn(Optional.empty());
 
         mockMvc.perform(patch("/orders/999/cancel"))
             .andExpect(status().isNotFound());
@@ -144,7 +137,8 @@ public class OrderControllerTest {
         Order order = new Order("u1", "updated-product", 10);
         order.setStatus(OrderStatus.CREATED);
 
-        orderService.order = Optional.of(order);
+        when(orderService.updateOrder(any(String.class), any(UpdateOrderRequest.class)))
+                .thenReturn(Optional.of(order));
 
         String updateJson = """
             {
@@ -166,7 +160,8 @@ public class OrderControllerTest {
     @Test
     void shouldReturn404WhenUpdatingNonExistingOrder() throws Exception {
 
-        orderService.order = Optional.empty();
+        when(orderService.updateOrder(any(String.class), any(UpdateOrderRequest.class)))
+                .thenReturn(Optional.empty());
 
         String updateJson = """
             {
@@ -178,61 +173,5 @@ public class OrderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(updateJson))
                 .andExpect(status().isNotFound());
-    }
-
-    @TestConfiguration
-    static class TestConfig {
-
-        @Bean
-        TestOrderService orderService() {
-            return new TestOrderService();
-        }
-    }
-
-    static class TestOrderService extends OrderService {
-
-        private Order orderToCreate;
-        private List<Order> orders = new ArrayList<>();
-        private Optional<Order> order = Optional.empty();
-
-        TestOrderService() {
-            super(null, null, null);
-        }
-
-        @Override
-        public Order createOrder(CreateOrderRequest request) {
-            return orderToCreate;
-        }
-
-        @Override
-        public List<Order> getOrders() {
-            return orders;
-        }
-
-        @Override
-        public Optional<Order> getOrder(String id) {
-            return order;
-        }
-
-        @Override
-        public Optional<Order> cancelOrder(String id) {
-            order.ifPresent(o -> o.setStatus(OrderStatus.CANCELLED));
-            return order;
-        }
-
-        @Override
-        public Optional<Order> updateOrder(String id, UpdateOrderRequest request) {
-
-            order.ifPresent(o -> {
-                if (request.getQuantity() != null) {
-                    o.setQuantity(request.getQuantity());
-                }
-                if (request.getProductId() != null) {
-                    o.setProductId(request.getProductId());
-                }
-            });
-
-            return order;
-        }
     }
 }

@@ -7,7 +7,7 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:21-jdk
 WORKDIR /app
 
-COPY --from=builder /app/target/main-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
 
 ENV MONGO_URI=mongodb://mongodb:27017/ecommerce
 ENV SPRING_MONGODB_URI=mongodb://mongodb:27017/ecommerce

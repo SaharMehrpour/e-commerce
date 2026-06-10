@@ -61,17 +61,14 @@ jobs:
           java-version: 17
           cache: maven
 
-      - name: Make mvnw executable
-        run: chmod +x mvnw
-
       - name: Run backend tests (all modules)
         working-directory: backend
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/inventory_db
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
-        run: ./mvnw clean test
+        run: mvn clean test
 
       - name: Run Checkstyle
         working-directory: backend
-        run: ./mvnw checkstyle:check
+        run: mvn checkstyle:check -Dcheckstyle.config.location=build_tools/checkstyle/checkstyle.xml

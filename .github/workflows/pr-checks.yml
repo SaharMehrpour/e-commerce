@@ -2,6 +2,7 @@ name: PR Checks
 
 on:
   pull_request:
+  workflow_dispatch:
 
 jobs:
 
@@ -49,10 +50,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    defaults:
-      run:
-        working-directory: main
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,17 +58,13 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
+          cache: maven
 
-      - name: Make mvnw executable
-        run: chmod +x mvnw
-
-      - name: Run tests
-        env:
-          POSTGRES_DB: inventory_db
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-        run: ./mvnw clean test
+      - name: Run backend tests (all modules)
+        working-directory: backend
+        run: mvn clean test
 
       - name: Run Checkstyle
-        run: ./mvnw checkstyle:check
+        working-directory: backend
+        run: mvn checkstyle:check -Dcheckstyle.config.location=build_tools/checkstyle/checkstyle.xml

@@ -2,7 +2,6 @@ name: PR Checks
 
 on:
   pull_request:
-  workflow_dispatch:
 
 jobs:
 
@@ -50,6 +49,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    defaults:
+      run:
+        working-directory: main
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,19 +62,16 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          cache: maven
 
       - name: Make mvnw executable
-        run: chmod +x backend/mvnw
+        run: chmod +x mvnw
 
-      - name: Run backend tests (all modules)
-        working-directory: backend
+      - name: Run tests
         env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/inventory_db
+          POSTGRES_DB: inventory_db
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
         run: ./mvnw clean test
 
       - name: Run Checkstyle
-        working-directory: backend
         run: ./mvnw checkstyle:check

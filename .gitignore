@@ -1,3 +1,5 @@
 **/.DS_Store
 *.pid
 *.log
+.vscode
+e-commerce.code-workspace

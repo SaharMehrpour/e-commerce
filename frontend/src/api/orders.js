@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_ORDER_API_URL + "/orders";
+const BASE_URL = import.meta.env.VITE_API_URL + "/orders";
 
 export async function createOrder(order) {
 

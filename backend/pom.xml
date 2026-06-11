@@ -13,6 +13,7 @@
         <module>shared_lib</module>
         <module>order_service</module>
         <module>inventory_service</module>
+        <module>gateway_service</module>
     </modules>
 
     <properties>

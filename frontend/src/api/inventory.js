@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_INVENTORY_API_URL + "/inventory";
+const BASE_URL = import.meta.env.VITE_API_URL + "/inventory";
 
 export async function getInventory() {
 

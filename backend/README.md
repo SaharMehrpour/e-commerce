@@ -1,21 +1,97 @@
-- To start mongodb and kafka: `docker compose up -d`
-- To install the app: `./mvnw clean install`
-- To start the app: `./mvnw clean spring-boot:run`
+## Development Setup
 
+### Start Infrastructure Services
 
-### Reset the Database and Cache
-
-1. Stop and remove all three containers
 ```bash
-docker rm -f postgres-inventory ecommerce-mongodb ecommerce-redis
+docker compose up -d mongodb postgres-inventory redis zookeeper kafka
 ```
 
-2. Delete all three data volumes
+### Build Backend Services
+
+From the repository root:
+
 ```bash
-docker volume rm main_inventory_pgdata main_mongo-data main_redis-data
+mvn clean install
 ```
 
-### Run the app
+### Run Services Locally
+
+API Gateway:
+
+```bash
+cd backend/gateway_service
+mvn spring-boot:run
+```
+
+Order Service:
+
+```bash
+cd backend/order_service
+mvn spring-boot:run
+```
+
+Inventory Service:
+
+```bash
+cd backend/inventory_service
+mvn spring-boot:run
+```
+
+---
+
+## Reset Databases and Cache
+
+Stop and remove the containers:
+
+```bash
+docker compose down
+```
+
+Remove persisted data volumes:
+
+```bash
+docker volume rm \
+  backend_inventory_pgdata \
+  backend_mongo-data \
+  backend_redis-data
+```
+
+---
+
+## Run the Full System with Docker
+
+Build and start all services:
+
 ```bash
 docker compose up --build
+```
+
+Run in detached mode:
+
+```bash
+docker compose up --build -d
+```
+
+After startup:
+
+| Service     | URL                   |
+| ----------- | --------------------- |
+| Frontend    | http://localhost:5173 |
+| API Gateway | http://localhost:8080 |
+| Prometheus  | http://localhost:9090 |
+
+Stop all services:
+
+```bash
+docker compose down
+```
+
+Or from the repository root:
+
+```bash
+./start.sh
+```
+
+```bash
+./stop.sh
 ```

@@ -1,157 +1,257 @@
-# 🛒 E-Commerce Event-Driven System
+# 🛒 E-Commerce Event-Driven Microservices System
 
-A full-stack e-commerce system built with **Spring Boot**, **React**, and an **event-driven architecture using Kafka**, with caching via **Redis** and persistence in **MongoDB** and **PostgreSQL**.
+A full-stack e-commerce system built with **Spring Boot**, **React**, and an **event-driven architecture powered by Kafka**. The application is split into independent microservices behind an **API Gateway**, uses **Redis** for caching, **MongoDB** for order storage, **PostgreSQL** for inventory management and idempotent event processing, and **Prometheus** for observability.
 
-This project is designed for learning and demonstrating modern backend architecture concepts such as microservices design, messaging systems, caching strategies, and full-stack integration.
+This project is designed to demonstrate modern backend engineering concepts including microservices architecture, event-driven communication, API gateways, caching strategies, containerization, and full-stack integration.
 
 
 
 ## 🚀 Tech Stack
 
 ### Backend
-- Java 17
-- Spring Boot
-- Spring Web MVC
-- Spring Data MongoDB
-- Spring Data PostgreSQL
-- Spring Kafka
-- Redis (Spring Cache abstraction)
+
+* Java 21
+* Spring Boot
+* Spring Web MVC
+* Spring Data MongoDB
+* Spring Data JPA
+* PostgreSQL
+* Spring Kafka
+* Spring Cache (Redis)
+* Spring Cloud Gateway
+* Spring Boot Actuator
+* Micrometer
 
 ### Frontend
-- React (Vite)
-- JavaScript
-- Fetch API
+
+* React (Vite)
+* JavaScript
+* Fetch API
 
 ### Infrastructure
-- Docker & Docker Compose
-- Apache Kafka
-- ZooKeeper
-- MongoDB
-- PostgreSQL
-- Redis
+
+* Docker
+* Docker Compose
+* Apache Kafka
+* ZooKeeper
+* MongoDB
+* PostgreSQL
+* Redis
+* Prometheus
+
 
 
 ## 🧱 Architecture Overview
-```
+
+```text
 React Frontend
-↓ HTTP
-Spring Boot Backend
-├─ Order module → MongoDB
-├─ Inventory module → PostgreSQL
-├─ Redis cache
-└─ Kafka events
+       │
+       ▼
+ API Gateway (:8080)
+       │
+ ┌─────┴─────────────┐
+ ▼                   ▼
+Order Service    Inventory Service
+(MongoDB)        (PostgreSQL)
+      │                │
+      └──── Kafka ─────┘
+             │
+             ▼
+      Idempotency Store
+        (PostgreSQL)
+
+      Redis Cache
+      Prometheus
 ```
 
-The backend is currently a modular monolith: order and inventory are separate application modules in one Spring Boot process. Kafka is used to model the future service boundary and keep inventory updates event-driven, while the order flow still performs a synchronous inventory availability check before creating an order.
+### Services
 
-### Backend Boundaries
-- `order`: owns order persistence, order lifecycle rules, and order Kafka events.
-- `inventory`: owns stock mutations, stock invariants, and inventory Kafka events.
-- `kafka`: contains producers/consumers for integration between modules.
-- `config`: contains infrastructure wiring for Kafka, Redis, and HTTP clients.
-- `exception`: centralizes HTTP error mapping.
+#### Order Service
 
-### Current Tradeoffs
-- Order data is stored in MongoDB and inventory data in PostgreSQL. This is valid for demonstrating polyglot persistence, but it adds operational complexity in a single backend.
-- Redis is a read-through cache for orders and inventory. Mutating commands evict list caches and refresh item caches.
-- Kafka events are emitted after local database writes. For production reliability, the next required step is an outbox pattern so database commits and event publication cannot drift apart.
-- Inventory updates must be idempotent before multiple service instances or Kafka retries are introduced. Event IDs already exist and can become the basis for processed-event tracking.
+Responsible for order creation, updates, cancellation, persistence in MongoDB, publishing order-related Kafka events, and inventory availability checks through the Inventory Service.
+
+#### Inventory Service
+
+Responsible for inventory management, stock reservation and restoration, persistence in PostgreSQL, and publishing inventory-related Kafka events.
+
+#### API Gateway
+
+Provides a single entry point for frontend clients and routes requests to the appropriate backend service.
+
+#### Shared Library
+
+Contains shared event models, DTOs, idempotency utilities, and common components used across services.
+
+
+
+## 📡 Event-Driven Communication
+
+Services communicate asynchronously through Kafka by publishing and consuming domain events. Order-related actions generate order events, while inventory operations generate inventory events. Consumers use an idempotency mechanism backed by PostgreSQL to ensure events are processed only once, protecting the system from duplicate deliveries and retries.
+
+
+
+## ⚡ Caching Strategy
+
+Redis is used as a distributed cache to reduce database load and improve read performance. Frequently accessed order and inventory data are cached, while cache entries are automatically refreshed or invalidated when underlying data changes.
+
+
+
+## 💾 Data Storage
+
+### MongoDB
+
+Stores order data and order lifecycle information.
+
+### PostgreSQL
+
+Stores inventory data and serves as the persistence layer for processed Kafka event tracking used by the idempotency mechanism.
+
+This architecture demonstrates polyglot persistence by allowing each service to use the storage technology best suited to its domain.
+
 
 
 ## 🧪 Testing
 
-### Backend
-- JUnit 5
-- Custom fake repository
-- Fake Kafka producer
-- Pure unit tests (no Spring context required)
+The backend is tested using JUnit 5 and Mockito with a combination of unit and integration tests covering controllers, services, repositories, Kafka interactions, and caching behavior.
 
 ```bash
 ./mvnw clean test
 ```
 
-### Frontend
+The frontend uses Vitest and React Testing Library to verify component behavior and user interactions.
+
 ```bash
 npm run test
 ```
 
+
+
 ## 🐳 Running the Project
 
-This application is containerized. Please ensure you have **Docker** installed on your machine before proceeding.
+This application is fully containerized.
 
-Instead of running services manually, you can use the provided scripts.
+### Requirements
 
-### 🚀 Start the application
-```
+* Docker
+* Docker Compose
+
+### 🚀 Start
+
+```bash
 ./start.sh
 ```
 
-Run the following script to spin up the Docker containers (via `backend/docker-compose.yaml`):
+After startup:
 
-After running, the system will be available at:
+| Service     | URL                   |
+| -- | -- |
+| Frontend    | http://localhost:5173 |
+| API Gateway | http://localhost:8080 |
+| Prometheus  | http://localhost:9090 |
 
-- Backend → http://localhost:8080
-- Frontend → http://localhost:5173
+### 🛑 Stop
 
-### 🛑 Stop the application
-```
+```bash
 ./stop.sh
 ```
 
-This script will stop the app and remove Docker containers
+This stops and removes all containers and networks created by Docker Compose.
 
-## 📡 API Endpoints
-
-Implemented in:
-
-- `backend/src/main/java/com/ecommerce/order/OrderController.java`
-- `backend/src/main/java/com/ecommerce/inventory/InventoryController.java`
 
 
 ## 📊 Metrics & Observability
 
-This project uses **Spring Boot Actuator** with Micrometer to expose application metrics to **Prometheus**. 
-It includes both default system metrics and custom business metrics (e.g., orders created/cancelled), 
-enabling real-time monitoring and dashboard visualization with tools like Grafana.
+The project uses Spring Boot Actuator and Micrometer to expose application and business metrics to Prometheus. Custom metrics track domain operations such as order creation, order cancellation, and inventory updates, enabling monitoring and future dashboard integration.
 
+Prometheus endpoint:
 
-The `/actuator/prometheus` endpoint:
-```
+```text
 http://localhost:8080/actuator/prometheus
 ```
 
-Get the list of mertics via:
-```
+Metrics endpoint:
+
+```text
 http://localhost:8080/actuator/metrics
 ```
 
+Prometheus UI:
+
+```text
+http://localhost:9090
+```
+
+
+
+## 📁 Project Structure
+
+```text
+backend/
+├── gateway-service/
+├── order_service/
+├── inventory_service/
+├── shared_lib/
+├── deploy/
+│   └── prometheus/
+└── docker-compose.yml
+
+frontend/
+
+start.sh
+stop.sh
+```
+
+
+
 ## 🧠 Key Design Decisions
 
-***Event-Driven Architecture:***
-Orders emit events instead of directly triggering downstream logic.
+### Event-Driven Architecture
 
-***Redis Cache:***
-Used to improve read performance for frequently accessed orders.
+Services publish domain events through Kafka to decouple business workflows and support asynchronous communication.
 
-***MongoDB:***
-Acts as the source of truth for order data.
+### Idempotent Event Processing
 
-***PostgreSQL:***
-A Relational database acts as the source of truth for inventory data.
+Kafka consumers persist processed event identifiers in PostgreSQL to ensure events are handled exactly once from the application's perspective.
 
-***Separation of Concerns:***
-- Controller → HTTP layer
-- Service → business logic
-- Kafka Producer → event publishing
-- Repository → persistence
+### API Gateway
+
+Provides a single entry point for frontend clients and hides internal service topology.
+
+### Polyglot Persistence
+
+MongoDB and PostgreSQL are used to demonstrate service-specific storage choices and domain ownership.
+
+### Redis Caching
+
+Improves read performance and reduces database load by caching frequently requested data.
+
+### Service Separation
+
+Each service owns its domain, persistence layer, API, and event publishing responsibilities.
+
+### Containerized Infrastructure
+
+All services and supporting infrastructure run through Docker Compose for reproducible local development.
+
+
 
 ## 🔥 Future Improvements
-- Payment microservice (Kafka consumer)
-- Kubernetes deployment (Minikube)
-- API Gateway
-- Authentication (JWT / OAuth2)
-- Distributed tracing
+
+* Payment Service
+* User Service
+* Notification Service
+* Transactional Outbox Pattern
+* Distributed Tracing (OpenTelemetry)
+* Grafana Dashboards
+* Kubernetes Deployment
+* CI/CD Deployment Pipeline
+* JWT Authentication
+* OAuth2 / OpenID Connect
+* Service Discovery
+* Circuit Breakers and Retries
+
+
 
 ## Acknowledgements
 
-Some development tasks were assisted by AI coding tools (including OpenAI Codex).
+Some development tasks were assisted by AI coding tools, including GitHub Copilot and OpenAI models.

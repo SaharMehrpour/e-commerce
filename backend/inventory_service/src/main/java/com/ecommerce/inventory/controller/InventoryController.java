@@ -3,7 +3,6 @@ package com.ecommerce.inventory.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,7 +17,6 @@ import com.ecommerce.shared.dto.inventory.InventoryRequest;
 import jakarta.validation.Valid;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/inventory")
 public class InventoryController {
     private final InventoryService inventoryService;

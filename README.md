@@ -2,42 +2,39 @@
 
 A full-stack e-commerce system built with **Spring Boot**, **React**, and an **event-driven architecture powered by Kafka**. The application is split into independent microservices behind an **API Gateway**, uses **Redis** for caching, **MongoDB** for order storage, **PostgreSQL** for inventory management and idempotent event processing, and **Prometheus** for observability.
 
-This project is designed to demonstrate modern backend engineering concepts including microservices architecture, event-driven communication, API gateways, caching strategies, containerization, and full-stack integration.
+This project demonstrates modern backend engineering concepts including microservices architecture, event-driven communication, API gateways, caching strategies, containerization, and full-stack integration.
 
 
 
 ## 🚀 Tech Stack
 
 ### Backend
-
-* Java 21
-* Spring Boot
-* Spring Web MVC
-* Spring Data MongoDB
-* Spring Data JPA
-* PostgreSQL
-* Spring Kafka
-* Spring Cache (Redis)
-* Spring Cloud Gateway
-* Spring Boot Actuator
-* Micrometer
+- Java 21
+- Spring Boot
+- Spring Web MVC
+- Spring Data MongoDB
+- Spring Data JPA
+- PostgreSQL
+- Spring Kafka
+- Spring Cache (Redis)
+- Spring Cloud Gateway
+- Spring Boot Actuator
+- Micrometer
 
 ### Frontend
-
-* React (Vite)
-* JavaScript
-* Fetch API
+- React (Vite)
+- JavaScript
+- Fetch API
 
 ### Infrastructure
-
-* Docker
-* Docker Compose
-* Apache Kafka
-* ZooKeeper
-* MongoDB
-* PostgreSQL
-* Redis
-* Prometheus
+- Docker
+- Docker Compose
+- Apache Kafka
+- ZooKeeper
+- MongoDB
+- PostgreSQL
+- Redis
+- Prometheus
 
 
 
@@ -45,118 +42,133 @@ This project is designed to demonstrate modern backend engineering concepts incl
 
 ```text
 React Frontend
-       │
-       ▼
+        │
+        ▼
+ ecommerce.local (Ingress)
+        │
+        ▼
  API Gateway (:8080)
-       │
- ┌─────┴─────────────┐
- ▼                   ▼
-Order Service    Inventory Service
-(MongoDB)        (PostgreSQL)
-      │                │
-      └──── Kafka ─────┘
-             │
-             ▼
-      Idempotency Store
-        (PostgreSQL)
+        │
+ ┌──────┴─────────────┐
+ ▼                    ▼
+Order Service     Inventory Service
+(MongoDB)         (PostgreSQL)
+        │              │
+        └──── Kafka ───┘
+               │
+               ▼
+     Idempotency Store (PostgreSQL)
 
-      Redis Cache
-      Prometheus
+Redis Cache
+Prometheus Metrics
 ```
 
-### Services
+## 🧩 Services
 
-#### Order Service
+### Order Service
 
-Responsible for order creation, updates, cancellation, persistence in MongoDB, publishing order-related Kafka events, and inventory availability checks through the Inventory Service.
+Responsible for order creation, updates, cancellations, persistence in MongoDB, publishing order events via Kafka, and validating inventory availability through the Inventory Service.
 
-#### Inventory Service
+### Inventory Service
 
-Responsible for inventory management, stock reservation and restoration, persistence in PostgreSQL, and publishing inventory-related Kafka events.
+Responsible for stock management, reservation and restoration of inventory, persistence in PostgreSQL, and publishing inventory events. It also maintains idempotency records for Kafka event processing.
 
-#### API Gateway
+### API Gateway
 
-Provides a single entry point for frontend clients and routes requests to the appropriate backend service.
+Acts as the single entry point for all client requests and routes traffic to internal microservices based on path rules.
 
-#### Shared Library
+### Shared Library
 
-Contains shared event models, DTOs, idempotency utilities, and common components used across services.
-
-
+Contains shared event models, DTOs, and common utilities used across all services.
 
 ## 📡 Event-Driven Communication
 
-Services communicate asynchronously through Kafka by publishing and consuming domain events. Order-related actions generate order events, while inventory operations generate inventory events. Consumers use an idempotency mechanism backed by PostgreSQL to ensure events are processed only once, protecting the system from duplicate deliveries and retries.
-
-
+Services communicate asynchronously through Kafka by publishing and consuming domain events. Consumers persist processed event identifiers in PostgreSQL to guarantee idempotent processing and prevent duplicate side effects caused by retries or re-delivery.
 
 ## ⚡ Caching Strategy
 
-Redis is used as a distributed cache to reduce database load and improve read performance. Frequently accessed order and inventory data are cached, while cache entries are automatically refreshed or invalidated when underlying data changes.
-
-
+Redis is used as a distributed cache to improve performance and reduce database load. Frequently accessed data such as orders and inventory items are cached, and cache entries are invalidated or refreshed on write operations.
 
 ## 💾 Data Storage
 
 ### MongoDB
 
-Stores order data and order lifecycle information.
+Stores order data and order lifecycle state.
 
 ### PostgreSQL
 
-Stores inventory data and serves as the persistence layer for processed Kafka event tracking used by the idempotency mechanism.
+Stores inventory data and also tracks processed Kafka events for idempotency guarantees.
 
-This architecture demonstrates polyglot persistence by allowing each service to use the storage technology best suited to its domain.
-
-
+This setup demonstrates polyglot persistence with domain-driven data ownership.
 
 ## 🧪 Testing
 
-The backend is tested using JUnit 5 and Mockito with a combination of unit and integration tests covering controllers, services, repositories, Kafka interactions, and caching behavior.
+The backend uses JUnit 5 and Mockito for unit and integration testing across controllers, services, Kafka producers/consumers, and caching behavior.
 
 ```bash
 ./mvnw clean test
 ```
 
-The frontend uses Vitest and React Testing Library to verify component behavior and user interactions.
+The frontend uses Vitest and React Testing Library.
 
 ```bash
 npm run test
 ```
 
 
+## 🐳 Running Locally (Docker Compose)
 
-## 🐳 Running the Project
+Requirements
+- Docker
+- Docker Compose
 
-This application is fully containerized.
-
-### Requirements
-
-* Docker
-* Docker Compose
-
-### 🚀 Start
-
+### Start
 ```bash
 ./start.sh
 ```
 
-After startup:
+| Service	| URL |
+| - | - |
+| Frontend	| http://localhost:5173 |
+| API Gateway	| http://localhost:8080 |
+| Prometheus	| http://localhost:9090 |
 
-| Service     | URL                   |
-| -- | -- |
-| Frontend    | http://localhost:5173 |
-| API Gateway | http://localhost:8080 |
-| Prometheus  | http://localhost:9090 |
-
-### 🛑 Stop
-
+### Stop
 ```bash
 ./stop.sh
 ```
 
 This stops and removes all containers and networks created by Docker Compose.
 
+## ☸️ Running on Kubernetes (Minikube)
+
+The project also supports a full Kubernetes deployment locally using Minikube.
+
+Start Minikube
+```bash
+minikube start --driver=docker
+minikube addons enable ingress
+```
+
+Access Application
+
+Add to `/etc/hosts`:
+```
+127.0.0.1 ecommerce.local
+```
+
+Then run:
+```bash
+minikube tunnel
+```
+
+Now access:
+```
+http://ecommerce.local
+```
+
+This routes through:
+Ingress → API Gateway → Microservices
 
 
 ## 📊 Metrics & Observability
@@ -193,6 +205,7 @@ backend/
 ├── shared_lib/
 ├── deploy/
 │   └── prometheus/
+├── k8s/
 └── docker-compose.yml
 
 frontend/
@@ -207,32 +220,35 @@ stop.sh
 
 ### Event-Driven Architecture
 
-Services publish domain events through Kafka to decouple business workflows and support asynchronous communication.
+Services publish domain events via Kafka to decouple workflows and enable asynchronous processing.
 
 ### Idempotent Event Processing
 
-Kafka consumers persist processed event identifiers in PostgreSQL to ensure events are handled exactly once from the application's perspective.
+Kafka consumers store processed event IDs in PostgreSQL to guarantee exactly-once business effects.
 
 ### API Gateway
 
-Provides a single entry point for frontend clients and hides internal service topology.
+Provides a unified entry point and abstracts internal microservice topology.
 
 ### Polyglot Persistence
 
-MongoDB and PostgreSQL are used to demonstrate service-specific storage choices and domain ownership.
+MongoDB and PostgreSQL are used based on domain needs and ownership boundaries.
 
 ### Redis Caching
 
-Improves read performance and reduces database load by caching frequently requested data.
+Reduces database load and improves response times for frequently accessed data.
+
+### Kubernetes Deployment
+
+The system is fully deployable on Minikube using Ingress-based routing to simulate production-like environments.
 
 ### Service Separation
 
-Each service owns its domain, persistence layer, API, and event publishing responsibilities.
+Each microservice owns its domain logic, persistence, API, and event publishing responsibilities.
 
 ### Containerized Infrastructure
 
-All services and supporting infrastructure run through Docker Compose for reproducible local development.
-
+All services run via Docker Compose for local development and Kubernetes manifests for orchestration testing.
 
 
 ## 🔥 Future Improvements
@@ -243,12 +259,11 @@ All services and supporting infrastructure run through Docker Compose for reprod
 * Transactional Outbox Pattern
 * Distributed Tracing (OpenTelemetry)
 * Grafana Dashboards
-* Kubernetes Deployment
-* CI/CD Deployment Pipeline
+* CI/CD Pipeline (GitHub Actions → Kubernetes)
 * JWT Authentication
 * OAuth2 / OpenID Connect
 * Service Discovery
-* Circuit Breakers and Retries
+* Circuit Breakers & Resilience Patterns
 
 
 

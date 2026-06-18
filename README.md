@@ -1,9 +1,8 @@
 # 🛒 E-Commerce Event-Driven Microservices System
 
-A full-stack e-commerce system built with **Spring Boot**, **React**, and an **event-driven architecture powered by Kafka**. The application is split into independent microservices behind an **API Gateway**, uses **Redis** for caching, **MongoDB** for order storage, **PostgreSQL** for inventory management and idempotent event processing, and **Prometheus** for observability.
+A full-stack e-commerce system built with **Spring Boot**, **React**, and an **event-driven architecture powered by Kafka**. The application is split into independent microservices behind an **API Gateway**, uses **Redis** for caching, **MongoDB** for order storage, **PostgreSQL** for inventory management and idempotent event processing, **Prometheus** for observability, and supports both **Docker Compose** and **Kubernetes (Minikube)** deployments.
 
-This project demonstrates modern backend engineering concepts including microservices architecture, event-driven communication, API gateways, caching strategies, containerization, and full-stack integration.
-
+This project demonstrates modern backend engineering concepts including microservices architecture, event-driven communication, API gateways, caching strategies, containerization, orchestration with Kubernetes, and full-stack integration.
 
 
 ## 🚀 Tech Stack
@@ -29,6 +28,8 @@ This project demonstrates modern backend engineering concepts including microser
 ### Infrastructure
 - Docker
 - Docker Compose
+- Kubernetes
+- Minikube
 - Apache Kafka
 - ZooKeeper
 - MongoDB
@@ -47,7 +48,7 @@ React Frontend
  ecommerce.local (Ingress)
         │
         ▼
- API Gateway (:8080)
+ API Gateway
         │
  ┌──────┴─────────────┐
  ▼                    ▼
@@ -75,7 +76,7 @@ Responsible for stock management, reservation and restoration of inventory, pers
 
 ### API Gateway
 
-Acts as the single entry point for all client requests and routes traffic to internal microservices based on path rules.
+Acts as the single entry point for all client requests and routes traffic to internal microservices.
 
 ### Shared Library
 
@@ -99,7 +100,7 @@ Stores order data and order lifecycle state.
 
 Stores inventory data and also tracks processed Kafka events for idempotency guarantees.
 
-This setup demonstrates polyglot persistence with domain-driven data ownership.
+This demonstrates a polyglot persistence approach where each service owns its data store.
 
 ## 🧪 Testing
 
@@ -123,71 +124,180 @@ Requirements
 - Docker Compose
 
 ### Start
+
+Build and start all services:
+
 ```bash
 ./start.sh
 ```
 
-| Service	| URL |
-| - | - |
-| Frontend	| http://localhost:5173 |
-| API Gateway	| http://localhost:8080 |
-| Prometheus	| http://localhost:9090 |
+Skip image rebuild:
+
+```bash
+./start.sh --no-build
+```
+
+#### Available URLs
+
+| Service | URL |
+|----------|----------|
+| Frontend | http://localhost:5173 |
+| API Gateway | http://localhost:8080 |
+| Prometheus | http://localhost:9090 |
 
 ### Stop
+
 ```bash
 ./stop.sh
 ```
 
-This stops and removes all containers and networks created by Docker Compose.
+This stops and removes all Docker Compose containers and networks.
+
 
 ## ☸️ Running on Kubernetes (Minikube)
 
-The project also supports a full Kubernetes deployment locally using Minikube.
+The project includes a complete Kubernetes deployment using:
 
-Start Minikube
+- Minikube
+- NGINX Ingress Controller
+- Kubernetes manifests
+- Local DNS via `/etc/hosts`
+
+### Requirements
+
+Install:
+
+- Docker
+- kubectl
+- Minikube
+
+Verify:
+
 ```bash
-minikube start --driver=docker
-minikube addons enable ingress
+docker --version
+kubectl version --client
+minikube version
 ```
 
-Access Application
+### Start Kubernetes Environment
 
-Add to `/etc/hosts`:
-```
-127.0.0.1 ecommerce.local
-```
+Build images, start Minikube, enable Ingress, deploy all manifests, configure hosts file, and start the Minikube tunnel:
 
-Then run:
 ```bash
-minikube tunnel
+./start.sh k8s
 ```
 
-Now access:
+#### Skip Docker Image Build
+
+Useful when images are already built:
+
+```bash
+./start.sh k8s --no-build
 ```
+
+#### Skip /etc/hosts Modification (Assuming Prior Modification)
+
+```bash
+./start.sh k8s --no-hosts
+```
+
+### Access the Application
+
+Once deployment completes:
+
+```text
 http://ecommerce.local
 ```
 
-This routes through:
-Ingress → API Gateway → Microservices
+Traffic flow:
+
+```text
+Browser
+   │
+   ▼
+Ingress
+   │
+   ▼
+API Gateway
+   │
+   ├── Order Service
+   └── Inventory Service
+```
+
+### Stop Kubernetes Environment
+
+Delete application resources and stop Minikube:
+
+```bash
+./stop.sh k8s
+```
+
+#### Preserve /etc/hosts Entry
+
+```bash
+./stop.sh k8s --no-hosts-removed
+```
+
+### Useful Kubernetes Commands
+
+View pods:
+
+```bash
+kubectl get pods -n ecommerce
+```
+
+View services:
+
+```bash
+kubectl get svc -n ecommerce
+```
+
+View ingress:
+
+```bash
+kubectl get ingress -n ecommerce
+```
+
+View events:
+
+```bash
+kubectl get events -n ecommerce --sort-by=.lastTimestamp
+```
+
+View logs:
+
+```bash
+kubectl logs -f deployment/order-service -n ecommerce
+kubectl logs -f deployment/inventory-service -n ecommerce
+kubectl logs -f deployment/gateway-service -n ecommerce
+```
 
 
 ## 📊 Metrics & Observability
 
-The project uses Spring Boot Actuator and Micrometer to expose application and business metrics to Prometheus. Custom metrics track domain operations such as order creation, order cancellation, and inventory updates, enabling monitoring and future dashboard integration.
+The project uses Spring Boot Actuator and Micrometer to expose application and business metrics to Prometheus.
 
-Prometheus endpoint:
+Examples include:
+
+- Order creation metrics
+- Order cancellation metrics
+- Inventory update metrics
+
+### Prometheus Endpoint
 
 ```text
 http://localhost:8080/actuator/prometheus
 ```
 
-Metrics endpoint:
+### Metrics Endpoint
 
 ```text
 http://localhost:8080/actuator/metrics
 ```
 
-Prometheus UI:
+### Prometheus UI
+
+Docker deployment:
 
 ```text
 http://localhost:9090
@@ -199,14 +309,15 @@ http://localhost:9090
 
 ```text
 backend/
-├── gateway-service/
+├── gateway_service/
 ├── order_service/
 ├── inventory_service/
 ├── shared_lib/
 ├── deploy/
 │   └── prometheus/
 ├── k8s/
-└── docker-compose.yml
+├── docker-compose.yml
+└── docker-compose.k8s.yml
 
 frontend/
 
@@ -220,51 +331,58 @@ stop.sh
 
 ### Event-Driven Architecture
 
-Services publish domain events via Kafka to decouple workflows and enable asynchronous processing.
+Services publish and consume domain events through Kafka to reduce coupling and support asynchronous workflows.
 
 ### Idempotent Event Processing
 
-Kafka consumers store processed event IDs in PostgreSQL to guarantee exactly-once business effects.
+Consumers persist processed event IDs in PostgreSQL to prevent duplicate business operations.
 
 ### API Gateway
 
-Provides a unified entry point and abstracts internal microservice topology.
+Provides a unified entry point while hiding internal service topology.
 
 ### Polyglot Persistence
 
-MongoDB and PostgreSQL are used based on domain needs and ownership boundaries.
+MongoDB and PostgreSQL are used based on the requirements of each domain.
 
 ### Redis Caching
 
-Reduces database load and improves response times for frequently accessed data.
+Improves performance and reduces database load.
 
 ### Kubernetes Deployment
 
-The system is fully deployable on Minikube using Ingress-based routing to simulate production-like environments.
+Supports local production-like orchestration through Minikube and Ingress.
 
-### Service Separation
+### Service Ownership
 
-Each microservice owns its domain logic, persistence, API, and event publishing responsibilities.
+Each microservice owns:
+
+- Domain logic
+- Persistence
+- APIs
+- Event publishing
 
 ### Containerized Infrastructure
 
-All services run via Docker Compose for local development and Kubernetes manifests for orchestration testing.
+The entire platform can run via:
+
+- Docker Compose (development)
+- Kubernetes / Minikube (orchestration)
 
 
 ## 🔥 Future Improvements
 
-* Payment Service
-* User Service
-* Notification Service
-* Transactional Outbox Pattern
-* Distributed Tracing (OpenTelemetry)
-* Grafana Dashboards
-* CI/CD Pipeline (GitHub Actions → Kubernetes)
-* JWT Authentication
-* OAuth2 / OpenID Connect
-* Service Discovery
-* Circuit Breakers & Resilience Patterns
-
+- Payment Service
+- User Service
+- Notification Service
+- Transactional Outbox Pattern
+- Distributed Tracing (OpenTelemetry)
+- Grafana Dashboards
+- CI/CD Pipeline (GitHub Actions → Kubernetes)
+- JWT Authentication
+- OAuth2 / OpenID Connect
+- Service Discovery
+- Circuit Breakers & Resilience Patterns
 
 
 ## Acknowledgements

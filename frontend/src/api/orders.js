@@ -1,4 +1,6 @@
-const BASE_URL = import.meta.env.VITE_API_URL + "/orders";
+import { getApiUrl } from "./config";
+
+const BASE_URL = `${getApiUrl()}/orders`;
 
 export async function createOrder(order) {
 

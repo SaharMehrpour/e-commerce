@@ -1,4 +1,6 @@
-const BASE_URL = import.meta.env.VITE_API_URL + "/inventory";
+import { getApiUrl } from "./config";
+
+const BASE_URL = `${getApiUrl()}/inventory`;
 
 export async function getInventory() {
 

@@ -41,7 +41,7 @@ public class OrderControllerTest {
         Order createdOrder = new Order("u1", "p1", 2);
         createdOrder.setStatus(OrderStatus.CREATED);
 
-        when(orderService.createOrder(any(CreateOrderRequest.class))).thenReturn(createdOrder);
+        when(orderService.createOrder(any(CreateOrderRequest.class), null)).thenReturn(createdOrder);
 
         String orderJson = """
             {
@@ -71,7 +71,7 @@ public class OrderControllerTest {
         mockOrders.get(0).setStatus(OrderStatus.CREATED);
         mockOrders.get(1).setStatus(OrderStatus.CREATED);
 
-        when(orderService.getOrders()).thenReturn(mockOrders);
+        when(orderService.getOrders(null)).thenReturn(mockOrders);
 
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isOk())
@@ -91,7 +91,7 @@ public class OrderControllerTest {
         Order order = new Order("u1", "p1", 2);
         order.setStatus(OrderStatus.CREATED);
 
-        when(orderService.getOrder(any(String.class))).thenReturn(Optional.of(order));
+        when(orderService.getOrder(any(String.class), null)).thenReturn(Optional.of(order));
 
         mockMvc.perform(get("/orders/1"))
             .andExpect(status().isOk())
@@ -104,7 +104,7 @@ public class OrderControllerTest {
 
     @Test
     void shouldReturn404WhenNotFound() throws Exception {
-        when(orderService.getOrder(any(String.class))).thenReturn(Optional.empty());
+        when(orderService.getOrder(any(String.class), null)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/orders/999"))
             .andExpect(status().isNotFound());
@@ -115,7 +115,7 @@ public class OrderControllerTest {
         Order order = new Order("u1", "p1", 2);
         order.setStatus(OrderStatus.CANCELLED);
 
-        when(orderService.cancelOrder(any(String.class))).thenReturn(Optional.of(order));
+        when(orderService.cancelOrder(any(String.class), null)).thenReturn(Optional.of(order));
 
         mockMvc.perform(patch("/orders/1/cancel"))
             .andExpect(status().isOk())
@@ -128,7 +128,7 @@ public class OrderControllerTest {
 
     @Test
     void shouldReturn404WhenCancelledOrderNotFound() throws Exception {
-        when(orderService.cancelOrder(any(String.class))).thenReturn(Optional.empty());
+        when(orderService.cancelOrder(any(String.class), null)).thenReturn(Optional.empty());
 
         mockMvc.perform(patch("/orders/999/cancel"))
             .andExpect(status().isNotFound());
@@ -140,7 +140,7 @@ public class OrderControllerTest {
         Order order = new Order("u1", "updated-product", 10);
         order.setStatus(OrderStatus.CREATED);
 
-        when(orderService.updateOrder(any(String.class), any(UpdateOrderRequest.class)))
+        when(orderService.updateOrder(any(String.class), any(UpdateOrderRequest.class), null))
                 .thenReturn(Optional.of(order));
 
         String updateJson = """
@@ -163,7 +163,7 @@ public class OrderControllerTest {
     @Test
     void shouldReturn404WhenUpdatingNonExistingOrder() throws Exception {
 
-        when(orderService.updateOrder(any(String.class), any(UpdateOrderRequest.class)))
+        when(orderService.updateOrder(any(String.class), any(UpdateOrderRequest.class), null))
                 .thenReturn(Optional.empty());
 
         String updateJson = """

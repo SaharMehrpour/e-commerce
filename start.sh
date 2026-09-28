@@ -6,9 +6,32 @@ YELLOW='\033[1;33m'
 RED='\033[1;31m'
 NC='\033[0m'
 
+usage() {
+    cat <<EOF
+Usage: ./start.sh [mode] [options]
+
+Modes:
+  dev                 Start with Docker Compose (default)
+  k8s                 Start on Kubernetes (Minikube)
+
+Options:
+  no-build, --no-build    Skip building Docker images
+  no-hosts, --no-hosts    Skip editing /etc/hosts (k8s only)
+  tunnel, --tunnel        Start minikube tunnel (k8s only)
+  -h, --help, help        Show this help and exit
+
+Examples:
+  ./start.sh                      # dev mode, with build
+  ./start.sh k8s                  # k8s mode, with build
+  ./start.sh k8s --no-build       # k8s mode, reuse existing images
+  ./start.sh k8s --no-hosts       # k8s mode, don't touch /etc/hosts
+EOF
+}
+
 MODE="dev"
 NO_BUILD=false
 NO_HOSTS=false
+TUNNEL=false
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/backend"
@@ -21,6 +44,10 @@ echo "=================================="
 
 for arg in "$@"; do
     case "$arg" in
+        -h|--help|help)
+            usage
+            exit 0
+            ;;
         k8s|dev)
             MODE="$arg"
             ;;
@@ -29,6 +56,9 @@ for arg in "$@"; do
             ;;
         no-hosts|--no-hosts)
             NO_HOSTS=true
+            ;;
+        tunnel|--tunnel)
+            TUNNEL=true
             ;;
         *)
             echo -e "${RED}Unknown argument: $arg${NC}"
@@ -145,6 +175,33 @@ if [ "$MODE" = "k8s" ]; then
     done
 
     echo ""
+    echo "🔒 Ensuring TLS secret..."
+    CERT_DIR="$SCRIPT_DIR/certs"   # use $SCRIPT_DIR/backend/certs if that's where your certs live
+
+    if [ ! -f "$CERT_DIR/tls.crt" ] || [ ! -f "$CERT_DIR/tls.key" ]; then
+        if command -v mkcert >/dev/null 2>&1; then
+            mkcert -install
+            mkdir -p "$CERT_DIR"
+            mkcert -cert-file "$CERT_DIR/tls.crt" -key-file "$CERT_DIR/tls.key" \
+                ecommerce.local keycloak.ecommerce.local
+        else
+            echo -e "${YELLOW}No certs found and mkcert is not installed; ingress will use its default self-signed cert.${NC}"
+        fi
+    fi
+
+    if [ -f "$CERT_DIR/tls.crt" ] && [ -f "$CERT_DIR/tls.key" ]; then
+        kubectl create secret tls ecommerce-local-tls \
+            --cert="$CERT_DIR/tls.crt" --key="$CERT_DIR/tls.key" \
+            -n ecommerce --dry-run=client -o yaml | kubectl apply -f -
+    fi
+
+    echo ""
+    echo "🔐 Creating Keycloak realm ConfigMap..."
+    kubectl create configmap keycloak-realm-import \
+        --from-file=ecommerce-realm.json=k8s/keycloak/import/ecommerce-realm.json \
+        -n ecommerce --dry-run=client -o yaml | kubectl apply -f -
+
+    echo ""
     echo "📦 Applying Kubernetes manifests..."
     kubectl apply -f k8s/ --recursive
 
@@ -190,22 +247,25 @@ if [ "$MODE" = "k8s" ]; then
         HOST_ENTRY="127.0.0.1 ecommerce.local"
 
         echo ""
-        echo "🧠 Ensuring /etc/hosts entry..."
+        echo "🧠 Ensuring /etc/hosts entries..."
 
-        if ! grep -q "ecommerce.local" /etc/hosts; then
-            echo -e "${YELLOW}Adding hosts entry...${NC}"
-            echo "$HOST_ENTRY" | sudo tee -a /etc/hosts >/dev/null
-        fi
+        for host in ecommerce.local keycloak.ecommerce.local; do
+            if ! grep -qE "(^|[[:space:]])${host}([[:space:]]|$)" /etc/hosts; then
+                echo -e "${YELLOW}Adding hosts entry for ${host}...${NC}"
+                echo "127.0.0.1 ${host}" | sudo tee -a /etc/hosts >/dev/null
+            fi
+        done
     fi
 
-    echo ""
-    echo "🚇 Starting minikube tunnel..."
-
-    if ! pgrep -f "minikube tunnel" >/dev/null; then
-        nohup minikube tunnel >/tmp/minikube-tunnel.log 2>&1 &
-        echo $! > /tmp/minikube-tunnel.pid
-    else
-        echo "Tunnel already running."
+    if [ "$TUNNEL" = true ]; then
+        echo ""
+        echo "🚇 Starting minikube tunnel..."
+        if ! pgrep -f "minikube tunnel" >/dev/null; then
+            nohup minikube tunnel >/tmp/minikube-tunnel.log 2>&1 &
+            echo $! > /tmp/minikube-tunnel.pid
+        else
+            echo "Tunnel already running."
+        fi
     fi
 
     echo ""

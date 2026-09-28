@@ -1,19 +1,22 @@
-FROM maven:3.9-eclipse-temurin-21 AS builder
+# syntax=docker/dockerfile:1.7
 
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
 
 COPY . .
 
-RUN mvn -pl order_service -am clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -q -T 1C -pl order_service -am clean package -Dmaven.test.skip=true
 
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:21-jre-alpine
 
+RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
 COPY --from=builder /app/order_service/target/*.jar app.jar
 
+USER app
 ENV SPRING_PROFILES_ACTIVE=prod
-
 EXPOSE 8080
 
-ENTRYPOINT ["java","-jar","app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]

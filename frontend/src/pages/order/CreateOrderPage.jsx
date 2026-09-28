@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { createOrder } from "../../api/orders";
+import { AuthContext } from "../../auth/AuthProvider";
 
 const initialOrder = {
-  userId: "",
   productId: "",
   quantity: 1,
 };
 
 function CreateOrderPage() {
+  const { keycloak, authenticated } = useContext(AuthContext);
   const [order, setOrder] = useState(initialOrder);
   const [createdOrder, setCreatedOrder] = useState(null);
   const [error, setError] = useState("");
@@ -29,7 +30,7 @@ function CreateOrderPage() {
     setIsSubmitting(true);
 
     try {
-      const data = await createOrder(order);
+      const data = await createOrder(order, keycloak);
       setCreatedOrder(data);
       setOrder(initialOrder);
     } catch (error) {
@@ -60,19 +61,6 @@ function CreateOrderPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="row g-3">
-          <div className="col-md-6">
-            <label className="form-label">User ID</label>
-
-            <input
-              type="text"
-              name="userId"
-              className="form-control"
-              value={order.userId}
-              onChange={handleChange}
-              placeholder="Enter customer ID"
-              required
-            />
-          </div>
 
           <div className="col-md-6">
             <label className="form-label">Product ID</label>

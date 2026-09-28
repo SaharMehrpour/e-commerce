@@ -45,6 +45,9 @@ class OrderServiceTest {
     @Mock
     private InventoryClient inventoryClient;
 
+    @Mock
+    private OrderCacheService orderCacheService;
+
     private MeterRegistry meterRegistry;
 
     private OrderService orderService;
@@ -57,6 +60,7 @@ class OrderServiceTest {
                 repository,
                 kafkaProducer,
                 inventoryClient,
+                orderCacheService,
                 meterRegistry);
     }
 
@@ -64,7 +68,7 @@ class OrderServiceTest {
     void createOrderShouldSaveOrderAndPublishEvent() {
 
         CreateOrderRequest request = new CreateOrderRequest();
-        request.setUserId("u1");
+        // request.setUserId("u1");
         request.setProductId("p1");
         request.setQuantity(2);
 
@@ -82,7 +86,7 @@ class OrderServiceTest {
         when(inventoryClient.getInventory("p1")).thenReturn(mockInventory);
         when(repository.save(any(Order.class))).thenReturn(mockSavedOrder);
 
-        Order createdOrder = orderService.createOrder(request);
+        Order createdOrder = orderService.createOrder(request, null);
 
         assertNotNull(createdOrder);
         assertEquals("order-1", createdOrder.getId());
@@ -108,7 +112,7 @@ class OrderServiceTest {
     void createOrderShouldThrowWhenInventoryMissing() {
 
         CreateOrderRequest request = new CreateOrderRequest();
-        request.setUserId("u1");
+        // request.setUserId("u1");
         request.setProductId("p1");
         request.setQuantity(2);
 
@@ -116,7 +120,7 @@ class OrderServiceTest {
 
         InventoryNotFoundException ex = assertThrows(
                 InventoryNotFoundException.class,
-                () -> orderService.createOrder(request));
+                () -> orderService.createOrder(request, null));
 
         assertEquals("Inventory item not found for product p1", ex.getMessage());
 
@@ -128,7 +132,7 @@ class OrderServiceTest {
     void createOrderShouldThrowWhenNotEnoughStock() {
 
         CreateOrderRequest request = new CreateOrderRequest();
-        request.setUserId("u1");
+        // request.setUserId("u1");
         request.setProductId("p1");
         request.setQuantity(5);
 
@@ -139,7 +143,7 @@ class OrderServiceTest {
 
         InventoryNotEnoughException ex = assertThrows(
                 InventoryNotEnoughException.class,
-                () -> orderService.createOrder(request));
+                () -> orderService.createOrder(request, null    ));
 
         assertEquals("Insufficient stock", ex.getMessage());
 
@@ -152,7 +156,7 @@ class OrderServiceTest {
         Order order = new Order();
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
 
-        Optional<Order> foundOrder = orderService.getOrder("order-1");
+        Optional<Order> foundOrder = orderService.getOrder("order-1", null);
 
         assertTrue(foundOrder.isPresent());
         verify(repository).findById("order-1");
@@ -166,7 +170,7 @@ class OrderServiceTest {
 
         when(repository.findAll()).thenReturn(List.of(first, second));
 
-        List<Order> orders = orderService.getOrders();
+        List<Order> orders = orderService.getOrders(null);
 
         assertEquals(2, orders.size());
         verify(repository).findAll();
@@ -185,7 +189,7 @@ class OrderServiceTest {
         when(repository.findById("order-1")).thenReturn(Optional.of(order));
         when(repository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
 
-        Optional<Order> result = orderService.cancelOrder("order-1");
+        Optional<Order> result = orderService.cancelOrder("order-1", null);
 
         assertTrue(result.isPresent());
         assertEquals(OrderStatus.CANCELLED, result.get().getStatus());
@@ -211,7 +215,7 @@ class OrderServiceTest {
         request.setProductId("new-p");
         request.setQuantity(10);
 
-        Optional<Order> updated = orderService.updateOrder("order-1", request);
+        Optional<Order> updated = orderService.updateOrder("order-1", request, null);
 
         assertTrue(updated.isPresent());
 
@@ -222,7 +226,7 @@ class OrderServiceTest {
     void updateOrderShouldThrowWhenRequestNull() {
         IllegalArgumentException ex = assertThrows(
             IllegalArgumentException.class,
-            () -> orderService.updateOrder("order-1", null));
+            () -> orderService.updateOrder("order-1", null, null));
 
         assertEquals("Request cannot be null", ex.getMessage());
         verifyNoInteractions(repository);
@@ -237,7 +241,7 @@ class OrderServiceTest {
 
         OrderNotFoundException ex = assertThrows(
                 OrderNotFoundException.class,
-                () -> orderService.updateOrder("order-1", request));
+                () -> orderService.updateOrder("order-1", request, null));
 
         assertEquals("Order not found", ex.getMessage());
         verify(repository).findById("order-1");

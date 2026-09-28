@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import {
   cancelOrderById,
   getOrderById,
   updateOrder,
 } from "../../api/orders";
+import { AuthContext } from "../../auth/AuthProvider";
 
 function OrderDetailsPage() {
+  const { keycloak, authenticated } = useContext(AuthContext);
   const [orderId, setOrderId] = useState("");
   const [order, setOrder] = useState(null);
   const [orderFields, setOrderFields] = useState(null);
@@ -25,7 +27,7 @@ function OrderDetailsPage() {
 
     try {
       setIsLoading(true);
-      const data = await getOrderById(orderId.trim());
+      const data = await getOrderById(orderId.trim(), keycloak);
       setOrder(data);
     } catch (error) {
       setError(error.message);
@@ -38,7 +40,7 @@ function OrderDetailsPage() {
     try {
       setIsLoading(true);
 
-      const data = await updateOrder(orderId.trim(), validatedOrder);
+      const data = await updateOrder(orderId.trim(), validatedOrder, keycloak);
 
       setOrder(data);
       setOrderFields(null);
@@ -55,7 +57,7 @@ function OrderDetailsPage() {
     try {
       setIsLoading(true);
 
-      const data = await cancelOrderById(orderId.trim());
+      const data = await cancelOrderById(orderId.trim(), keycloak);
 
       setOrder(data);
       setValidatedOrder(null);

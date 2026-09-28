@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import "./App.css";
 import CreateOrderPage from "./pages/order/CreateOrderPage";
 import HomePage from "./pages/HomePage";
 import OrderDetailsPage from "./pages/order/OrderDetailsPage";
 import OrdersPage from "./pages/order/OrdersPage";
 import InventoryPage from "./pages/inventory/InventoryPage";
+import { AuthContext } from "./auth/AuthProvider";
 
 const pages = {
   home: {
@@ -31,6 +32,7 @@ const pages = {
 
 function App() {
   const [activePage, setActivePage] = useState("home");
+  const { keycloak, authenticated } = useContext(AuthContext);
 
   return (
     <main className="app-shell">
@@ -39,6 +41,36 @@ function App() {
           <div className="brand-title">E-Commerce</div>
           <div className="brand-subtitle">Order Management System</div>
         </div>
+
+        <div>
+          {authenticated ? (
+              <>
+                  <span>Logged in</span>
+                  <button onClick={() => keycloak.logout()}>
+                      Logout
+                  </button>
+              </>
+          ) : (
+              <button onClick={() => keycloak.login()}>
+                  Login
+              </button>
+          )}
+          <button
+            onClick={async () => {
+                await keycloak.updateToken(30);
+                const response = await fetch("http://localhost:8082/orders", {
+                    headers: {
+                        Authorization: `Bearer ${keycloak.token}`,
+                    },
+                });
+
+                console.log("Order API status:", response.status);
+                console.log("Order API response:", await response.text());
+            }}
+        >
+            Test Order API
+        </button>
+      </div>
 
         <nav className="page-tabs nav-pills" aria-label="Order pages">
           {Object.entries(pages).map(([pageId, page]) => (

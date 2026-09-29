@@ -271,6 +271,7 @@ if [ "$MODE" = "k8s" ]; then
     echo ""
     echo "=================================="
     echo "🌐 http://ecommerce.local"
+    echo "🔑 http://keycloak.ecommerce.local"
     echo "=================================="
 
 # =========================
@@ -287,16 +288,54 @@ else
         exit 1
     }
 
+    command -v jq >/dev/null 2>&1 || {
+        echo -e "${RED}Error: jq not installed (brew install jq).${NC}"
+        exit 1
+    }
+
     if [ "$NO_BUILD" = false ]; then
         echo "🔨 Building images via docker compose..."
         docker compose -f docker-compose.yml build
     fi
 
+    echo ""
+    echo "🔐 Preparing Keycloak realm for docker (SSL not required)..."
+    mkdir -p .generated/keycloak
+    jq '.sslRequired = "none"' k8s/keycloak/import/ecommerce-realm.json \
+        > .generated/keycloak/ecommerce-realm.json
+
     docker compose -f docker-compose.yml up -d
+    # Keycloak uses a throwaway DB, so recreate it to re-import the realm
+    docker compose -f docker-compose.yml up -d --force-recreate keycloak
+
+    echo ""
+    echo "⏳ Configuring Keycloak master realm..."
+    KC_READY=false
+    for i in {1..30}; do
+        if docker compose -f docker-compose.yml exec -T keycloak \
+            /opt/keycloak/bin/kcadm.sh config credentials \
+            --server http://localhost:8080 --realm master \
+            --user admin --password admin >/dev/null 2>&1; then
+            KC_READY=true
+            break
+        fi
+        echo "Waiting for Keycloak... ($i/30)"
+        sleep 2
+    done
+
+    if [ "$KC_READY" = true ]; then
+        docker compose -f docker-compose.yml exec -T keycloak \
+            /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+        echo -e "${GREEN}✅ Keycloak master realm configured.${NC}"
+    else
+        echo -e "${YELLOW}Keycloak not ready after 60s; master realm not updated.${NC}"
+        echo -e "${YELLOW}Check: docker compose -f docker-compose.yml logs keycloak${NC}"
+    fi
 
     echo ""
     echo "Frontend  : http://localhost:5173"
     echo "Backend   : http://localhost:8080"
+    echo "Keycloak  : http://localhost:8180"
     echo "Prometheus: http://localhost:9090"
     echo "=================================="
 fi

@@ -17,7 +17,6 @@ Modes:
 Options:
   no-build, --no-build    Skip building Docker images
   no-hosts, --no-hosts    Skip editing /etc/hosts (k8s only)
-  tunnel, --tunnel        Start minikube tunnel (k8s only)
   -h, --help, help        Show this help and exit
 
 Examples:
@@ -31,7 +30,6 @@ EOF
 MODE="dev"
 NO_BUILD=false
 NO_HOSTS=false
-TUNNEL=false
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/backend"
@@ -56,9 +54,6 @@ for arg in "$@"; do
             ;;
         no-hosts|--no-hosts)
             NO_HOSTS=true
-            ;;
-        tunnel|--tunnel)
-            TUNNEL=true
             ;;
         *)
             echo -e "${RED}Unknown argument: $arg${NC}"
@@ -198,12 +193,29 @@ if [ "$MODE" = "k8s" ]; then
     echo ""
     echo "🔐 Creating Keycloak realm ConfigMap..."
     kubectl create configmap keycloak-realm-import \
-        --from-file=ecommerce-realm.json=k8s/keycloak/import/ecommerce-realm.json \
+        --from-file=ecommerce-realm.json=keycloak-import/ecommerce-realm.json \
         -n ecommerce --dry-run=client -o yaml | kubectl apply -f -
 
     echo ""
     echo "📦 Applying Kubernetes manifests..."
-    kubectl apply -f k8s/ --recursive
+
+    MAX_ATTEMPTS=6
+
+    for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+        if kubectl apply -f k8s/ --recursive; then
+            echo -e "${GREEN}✅ Kubernetes manifests applied.${NC}"
+            break
+        fi
+
+        if [ "$attempt" -eq "$MAX_ATTEMPTS" ]; then
+            echo -e "${RED}Failed to apply Kubernetes manifests after ${MAX_ATTEMPTS} attempts.${NC}"
+            show_k8s_status
+            exit 1
+        fi
+
+        echo -e "${YELLOW}Manifest application failed. Retrying in 5 seconds (${attempt}/${MAX_ATTEMPTS})...${NC}"
+        sleep 5
+    done
 
     echo ""
     echo "♻️ Restarting deployments..."
@@ -257,16 +269,11 @@ if [ "$MODE" = "k8s" ]; then
         done
     fi
 
-    if [ "$TUNNEL" = true ]; then
-        echo ""
-        echo "🚇 Starting minikube tunnel..."
-        if ! pgrep -f "minikube tunnel" >/dev/null; then
-            nohup minikube tunnel >/tmp/minikube-tunnel.log 2>&1 &
-            echo $! > /tmp/minikube-tunnel.pid
-        else
-            echo "Tunnel already running."
-        fi
-    fi
+    
+    echo ""
+    echo "🚇 Minikube tunnel must run in a separate terminal."
+    echo -e "${YELLOW}Run: minikube tunnel${NC}"
+    echo -e "${YELLOW}Keep that terminal open while using the application.${NC}"
 
     echo ""
     echo "=================================="
@@ -301,7 +308,7 @@ else
     echo ""
     echo "🔐 Preparing Keycloak realm for docker (SSL not required)..."
     mkdir -p .generated/keycloak
-    jq '.sslRequired = "none"' k8s/keycloak/import/ecommerce-realm.json \
+    jq '.sslRequired = "none"' keycloak-import/ecommerce-realm.json \
         > .generated/keycloak/ecommerce-realm.json
 
     docker compose -f docker-compose.yml up -d

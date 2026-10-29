@@ -1,11 +1,9 @@
 package com.ecommerce.order.service;
 
-import com.ecommerce.order.client.InventoryClient;
 import com.ecommerce.order.domain.Order;
 import com.ecommerce.order.messaging.OrderEventProducer;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.shared.domain.order.OrderStatus;
-import com.ecommerce.shared.dto.inventory.InventoryResponse;
 import com.ecommerce.shared.dto.order.CreateOrderRequest;
 import com.ecommerce.shared.dto.order.UpdateOrderRequest;
 import com.ecommerce.shared.event.order.OrderCancelledEvent;
@@ -13,8 +11,6 @@ import com.ecommerce.shared.event.order.OrderCreatedEvent;
 import com.ecommerce.shared.event.order.OrderUpdatedEvent;
 import com.ecommerce.shared.exception.auth.NotAuthorizedException;
 import com.ecommerce.shared.exception.inventory.InvalidOrderException;
-import com.ecommerce.shared.exception.inventory.InventoryNotEnoughException;
-import com.ecommerce.shared.exception.inventory.InventoryNotFoundException;
 import com.ecommerce.shared.exception.order.OrderAlreadyCancelledException;
 import com.ecommerce.shared.exception.order.OrderNotFoundException;
 import com.ecommerce.shared.exception.order.OrderNotUpdatableException;
@@ -24,7 +20,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Caching;
-
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +32,6 @@ public class OrderService {
 
     private final OrderRepository repository;
     private final OrderEventProducer kafkaProducer;
-    private final InventoryClient inventoryClient;
     private final OrderCacheService orderCacheService;
 
     private final Counter ordersCreatedCounter;
@@ -46,12 +40,10 @@ public class OrderService {
     public OrderService(
             OrderRepository repository,
             OrderEventProducer kafkaProducer,
-            InventoryClient inventoryClient,
             OrderCacheService orderCacheService,
             MeterRegistry meterRegistry) {
         this.repository = repository;
         this.kafkaProducer = kafkaProducer;
-        this.inventoryClient = inventoryClient;
         this.orderCacheService = orderCacheService;
 
         this.ordersCreatedCounter = Counter.builder("orders.created")
@@ -82,21 +74,11 @@ public class OrderService {
 
         String authenticatedUserId = authentication.getToken().getSubject();
 
-        InventoryResponse inventoryResponse = Optional.ofNullable(
-                inventoryClient.getInventory(request.getProductId()))
-                .orElseThrow(() -> new InventoryNotFoundException(
-                        "Inventory item not found for product "
-                                + request.getProductId()));
-
-        if (inventoryResponse.getAvailableQuantity() < request.getQuantity()) {
-            throw new InventoryNotEnoughException("Insufficient stock");
-        }
-
         Order order = new Order();
         order.setUserId(authenticatedUserId);
         order.setProductId(request.getProductId());
         order.setQuantity(request.getQuantity());
-        order.setStatus(OrderStatus.CREATED);
+        order.setStatus(OrderStatus.PENDING);
 
         Order savedOrder = repository.save(order);
 

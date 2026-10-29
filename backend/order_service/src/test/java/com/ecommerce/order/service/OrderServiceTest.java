@@ -1,6 +1,5 @@
 package com.ecommerce.order.service;
 
-import com.ecommerce.order.client.InventoryClient;
 import com.ecommerce.order.domain.Order;
 import com.ecommerce.order.messaging.OrderEventProducer;
 import com.ecommerce.order.repository.OrderRepository;
@@ -43,9 +42,6 @@ class OrderServiceTest {
     private OrderEventProducer kafkaProducer;
 
     @Mock
-    private InventoryClient inventoryClient;
-
-    @Mock
     private OrderCacheService orderCacheService;
 
     private MeterRegistry meterRegistry;
@@ -59,7 +55,6 @@ class OrderServiceTest {
         orderService = new OrderService(
                 repository,
                 kafkaProducer,
-                inventoryClient,
                 orderCacheService,
                 meterRegistry);
     }
@@ -68,7 +63,6 @@ class OrderServiceTest {
     void createOrderShouldSaveOrderAndPublishEvent() {
 
         CreateOrderRequest request = new CreateOrderRequest();
-        // request.setUserId("u1");
         request.setProductId("p1");
         request.setQuantity(2);
 
@@ -83,7 +77,6 @@ class OrderServiceTest {
         mockSavedOrder.setQuantity(2);
         mockSavedOrder.setStatus(OrderStatus.CREATED);
 
-        when(inventoryClient.getInventory("p1")).thenReturn(mockInventory);
         when(repository.save(any(Order.class))).thenReturn(mockSavedOrder);
 
         Order createdOrder = orderService.createOrder(request, null);
@@ -112,11 +105,8 @@ class OrderServiceTest {
     void createOrderShouldThrowWhenInventoryMissing() {
 
         CreateOrderRequest request = new CreateOrderRequest();
-        // request.setUserId("u1");
         request.setProductId("p1");
         request.setQuantity(2);
-
-        when(inventoryClient.getInventory("p1")).thenReturn(null);
 
         InventoryNotFoundException ex = assertThrows(
                 InventoryNotFoundException.class,
@@ -132,14 +122,11 @@ class OrderServiceTest {
     void createOrderShouldThrowWhenNotEnoughStock() {
 
         CreateOrderRequest request = new CreateOrderRequest();
-        // request.setUserId("u1");
         request.setProductId("p1");
         request.setQuantity(5);
 
         InventoryResponse mockInventory = new InventoryResponse();
         mockInventory.setAvailableQuantity(2);
-
-        when(inventoryClient.getInventory("p1")).thenReturn(mockInventory);
 
         InventoryNotEnoughException ex = assertThrows(
                 InventoryNotEnoughException.class,

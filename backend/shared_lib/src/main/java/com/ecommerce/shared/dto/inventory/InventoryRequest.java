@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class InventoryRequest {
+    private String orderId;
+
     @NotBlank(message = "Product ID is required")
     private String productId;
 
@@ -16,6 +18,14 @@ public class InventoryRequest {
     private Integer reservedQuantity;
 
     public InventoryRequest() {}
+
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
 
     public String getProductId() {
         return productId;

@@ -37,7 +37,7 @@ class InventoryEventProducerTest {
     @Test
     void shouldSendInventoryReservedEvent() {
 
-        InventoryReservedEvent event = new InventoryReservedEvent("p1", 2);
+        InventoryReservedEvent event = new InventoryReservedEvent("p1", null, 2);
 
         producer.sendInventoryReservedEvent(event);
 

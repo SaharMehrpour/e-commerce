@@ -2,6 +2,7 @@ package com.ecommerce.order.service;
 
 import com.ecommerce.order.domain.Order;
 import com.ecommerce.order.messaging.OrderEventProducer;
+import com.ecommerce.order.messaging.ProductValidationClient;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.shared.domain.order.OrderStatus;
 import com.ecommerce.shared.dto.order.CreateOrderRequest;
@@ -9,6 +10,7 @@ import com.ecommerce.shared.event.order.OrderCancelledEvent;
 import com.ecommerce.shared.event.order.OrderCreatedEvent;
 import com.ecommerce.shared.event.order.OrderUpdatedEvent;
 import com.ecommerce.shared.exception.auth.NotAuthorizedException;
+import com.ecommerce.shared.exception.inventory.InvalidOrderException;
 import com.ecommerce.shared.exception.order.OrderNotFoundException;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -19,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
+import static org.mockito.Mockito.inOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,6 +37,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
@@ -49,6 +54,9 @@ class OrderServiceTest {
     @Mock
     private OrderCacheService orderCacheService;
 
+    @Mock
+    private ProductValidationClient productValidationClient;
+
     private MeterRegistry meterRegistry;
     private OrderService orderService;
 
@@ -60,6 +68,7 @@ class OrderServiceTest {
                 repository,
                 kafkaProducer,
                 orderCacheService,
+                productValidationClient,
                 meterRegistry);
     }
 
@@ -87,10 +96,13 @@ class OrderServiceTest {
     }
 
     @Test
-    void createOrderShouldSaveOrderAndPublishEvent() {
+    void createOrderShouldValidateProductThenSaveOrderAndPublishEvent() {
         CreateOrderRequest request = new CreateOrderRequest();
         request.setProductId("p1");
         request.setQuantity(2);
+
+        when(productValidationClient.validateProduct("p1"))
+                .thenReturn(true);
 
         when(repository.save(any(Order.class))).thenAnswer(invocation -> {
             Order order = invocation.getArgument(0);
@@ -109,9 +121,13 @@ class OrderServiceTest {
         assertEquals(2, createdOrder.getQuantity());
         assertEquals(OrderStatus.PENDING, createdOrder.getStatus());
 
-        verify(repository).save(any(Order.class));
+        InOrder inOrder = inOrder(productValidationClient, repository, kafkaProducer);
+        inOrder.verify(productValidationClient).validateProduct("p1");
+        inOrder.verify(repository).save(any(Order.class));
+        inOrder.verify(kafkaProducer).sendOrderCreatedEvent(any(OrderCreatedEvent.class));
 
-        ArgumentCaptor<OrderCreatedEvent> eventCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
+        ArgumentCaptor<OrderCreatedEvent> eventCaptor =
+                ArgumentCaptor.forClass(OrderCreatedEvent.class);
 
         verify(kafkaProducer).sendOrderCreatedEvent(eventCaptor.capture());
 
@@ -125,37 +141,59 @@ class OrderServiceTest {
     }
 
     @Test
-    void createOrderShouldThrowWhenRequestIsNull() {
-        assertThrows(
-                com.ecommerce.shared.exception.inventory.InvalidOrderException.class,
-                () -> orderService.createOrder(null, customerAuthentication()));
+    void createOrderShouldThrowWhenProductDoesNotExist() {
+            CreateOrderRequest request = new CreateOrderRequest();
+            request.setProductId("missing-product");
+            request.setQuantity(2);
 
-        verifyNoInteractions(repository, kafkaProducer);
+            when(productValidationClient.validateProduct("missing-product"))
+                            .thenReturn(false);
+
+            assertThrows(
+                            InvalidOrderException.class,
+                            () -> orderService.createOrder(
+                                            request,
+                                            customerAuthentication()));
+
+            verify(productValidationClient).validateProduct("missing-product");
+            verifyNoInteractions(repository, kafkaProducer);
+    }
+
+    @Test
+    void createOrderShouldThrowWhenRequestIsNull() {
+            assertThrows(
+                            InvalidOrderException.class,
+                            () -> orderService.createOrder(null, customerAuthentication()));
+
+            verifyNoInteractions(
+                            repository, kafkaProducer, productValidationClient);
     }
 
     @Test
     void createOrderShouldThrowWhenProductIdIsMissing() {
-        CreateOrderRequest request = new CreateOrderRequest();
-        request.setQuantity(2);
+            CreateOrderRequest request = new CreateOrderRequest();
+            request.setQuantity(2);
 
-        assertThrows(
-                com.ecommerce.shared.exception.inventory.InvalidOrderException.class,
-                () -> orderService.createOrder(request, customerAuthentication()));
+            assertThrows(
+                            InvalidOrderException.class,
+                            () -> orderService.createOrder(request, customerAuthentication()));
 
-        verifyNoInteractions(repository, kafkaProducer);
+            verifyNoInteractions(
+                            repository, kafkaProducer, productValidationClient);
     }
 
     @Test
     void createOrderShouldThrowWhenQuantityIsNotPositive() {
-        CreateOrderRequest request = new CreateOrderRequest();
-        request.setProductId("p1");
-        request.setQuantity(0);
+            CreateOrderRequest request = new CreateOrderRequest();
+            request.setProductId("p1");
+            request.setQuantity(0);
 
-        assertThrows(
-                com.ecommerce.shared.exception.inventory.InvalidOrderException.class,
-                () -> orderService.createOrder(request, customerAuthentication()));
+            assertThrows(
+                            InvalidOrderException.class,
+                            () -> orderService.createOrder(request, customerAuthentication()));
 
-        verifyNoInteractions(repository, kafkaProducer);
+            verifyNoInteractions(
+                            repository, kafkaProducer, productValidationClient);
     }
 
     @Test

@@ -15,6 +15,7 @@ import com.ecommerce.shared.event.inventory.InventoryFailedEvent;
 import com.ecommerce.shared.event.inventory.InventoryReservedEvent;
 import com.ecommerce.shared.event.inventory.InventoryRestoredEvent;
 import com.ecommerce.shared.event.inventory.InventoryUpdatedEvent;
+import com.ecommerce.shared.event.inventory.ProductValidationRequest;
 import com.ecommerce.shared.event.order.OrderCancelledEvent;
 import com.ecommerce.shared.event.order.OrderCreatedEvent;
 import com.ecommerce.shared.event.order.OrderUpdatedEvent;
@@ -122,5 +123,13 @@ public class KafkaConsumerConfig {
         return listenerFactory(
                 OrderCancelledEvent.class,
                 errorHandler);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, ProductValidationRequest> productValidationRequestKafkaListenerFactory(
+                    DefaultErrorHandler errorHandler) {
+            return listenerFactory(
+                            ProductValidationRequest.class,
+                            errorHandler);
     }
 }

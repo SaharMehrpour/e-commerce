@@ -1,11 +1,13 @@
 package com.ecommerce.inventory.controller;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -16,20 +18,15 @@ import com.ecommerce.shared.dto.inventory.InventoryRequest;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.util.List;
-import java.util.Optional;
-
 @WebMvcTest(controllers = InventoryController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@ContextConfiguration(classes = InventoryController.class)
-
-public class InventoryControllerTest {
+class InventoryControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,7 +35,7 @@ public class InventoryControllerTest {
     private InventoryService inventoryService;
 
     @MockitoBean
-    ProcessedEventRepository processedEventRepository;
+    private ProcessedEventRepository processedEventRepository;
 
     @Test
     void addStockShouldUpdateInventory() throws Exception {
@@ -223,60 +220,3 @@ public class InventoryControllerTest {
                 .andExpect(jsonPath("$[1].reservedQuantity").value(30));
     }
 }
-
-// package com.ecommerce.inventory.controller;
-
-// import com.ecommerce.inventory.domain.InventoryItem;
-// import com.ecommerce.inventory.service.InventoryService;
-// import com.ecommerce.shared.dto.inventory.InventoryRequest;
-// import org.junit.jupiter.api.Test;
-// import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-// import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-// import org.springframework.http.MediaType;
-// import org.springframework.test.context.ContextConfiguration;
-// import org.springframework.test.context.bean.override.mockito.MockitoBean;
-// import org.springframework.test.web.servlet.MockMvc;
-
-// import java.util.Optional;
-
-// import static org.mockito.ArgumentMatchers.any;
-// import static org.mockito.Mockito.when;
-// import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-// import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-// @WebMvcTest(InventoryController.class)
-// @AutoConfigureMockMvc(addFilters = false)
-// @ContextConfiguration(classes = InventoryController.class)
-// class InventoryControllerTest {
-
-//     @Autowired
-//     private MockMvc mockMvc;
-
-//     @MockitoBean
-//     private InventoryService inventoryService;
-
-//     @Test
-//     void addStock_shouldReturnUpdatedInventory() throws Exception {
-
-//         InventoryItem responseItem = new InventoryItem("p1", 150, 0);
-
-//         when(inventoryService.addStock(any(InventoryRequest.class)))
-//                 .thenReturn(Optional.of(responseItem));
-
-//         String requestJson = """
-//             {
-//                 "productId": "p1",
-//                 "quantity": 50
-//             }
-//         """;
-
-//         mockMvc.perform(patch("/inventory/add")
-//                         .contentType(MediaType.APPLICATION_JSON)
-//                         .content(requestJson))
-//                 .andExpect(status().isOk())
-//                 .andExpect(jsonPath("$.productId").value("p1"))
-//                 .andExpect(jsonPath("$.availableQuantity").value(150))
-//                 .andExpect(jsonPath("$.reservedQuantity").value(0));
-//     }
-// }

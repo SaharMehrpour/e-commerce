@@ -2,6 +2,7 @@ package com.ecommerce.order.service;
 
 import com.ecommerce.order.domain.Order;
 import com.ecommerce.order.messaging.OrderEventProducer;
+import com.ecommerce.order.messaging.ProductValidationClient;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.shared.domain.order.OrderStatus;
 import com.ecommerce.shared.dto.order.CreateOrderRequest;
@@ -33,6 +34,7 @@ public class OrderService {
     private final OrderRepository repository;
     private final OrderEventProducer kafkaProducer;
     private final OrderCacheService orderCacheService;
+    private final ProductValidationClient productValidationClient;
 
     private final Counter ordersCreatedCounter;
     private final Counter ordersCancelledCounter;
@@ -41,10 +43,12 @@ public class OrderService {
             OrderRepository repository,
             OrderEventProducer kafkaProducer,
             OrderCacheService orderCacheService,
+            ProductValidationClient productValidationClient,
             MeterRegistry meterRegistry) {
         this.repository = repository;
         this.kafkaProducer = kafkaProducer;
         this.orderCacheService = orderCacheService;
+        this.productValidationClient = productValidationClient;
 
         this.ordersCreatedCounter = Counter.builder("orders.created")
                 .description("Total number of orders created")
@@ -73,6 +77,12 @@ public class OrderService {
         }
 
         String authenticatedUserId = authentication.getToken().getSubject();
+
+        boolean productExists = productValidationClient.validateProduct(request.getProductId());
+        if (!productExists) {
+                throw new InvalidOrderException(
+                                "Product not found: " + request.getProductId());
+        }
 
         Order order = new Order();
         order.setUserId(authenticatedUserId);

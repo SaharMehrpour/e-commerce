@@ -14,6 +14,7 @@ import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
 import com.ecommerce.shared.event.order.OrderCancelledEvent;
 import com.ecommerce.shared.event.order.OrderCreatedEvent;
 import com.ecommerce.shared.event.order.OrderUpdatedEvent;
+import com.ecommerce.shared.event.inventory.ProductValidationResponse;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -88,4 +89,11 @@ public class KafkaConsumerConfig {
                 errorHandler);
     }
 
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, ProductValidationResponse> productValidationResponseKafkaListenerFactory(
+                    DefaultErrorHandler errorHandler) {
+            return listenerFactory(
+                            ProductValidationResponse.class,
+                            errorHandler);
+    }
 }

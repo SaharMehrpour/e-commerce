@@ -48,7 +48,7 @@ public class InventoryService {
         evict = @CacheEvict(value = "inventoryList", allEntries = true)
     )
     @Transactional
-    public Optional<InventoryItem> addStock(InventoryRequest request) {
+    public Optional<InventoryItem> updateStock(InventoryRequest request) {
         validateInventoryRequest(request);
 
         String productId = request.getProductId();
@@ -57,7 +57,7 @@ public class InventoryService {
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseGet(() -> new InventoryItem(productId, 0, 0));
 
-        item.setAvailableQuantity(item.getAvailableQuantity() + quantity);
+        item.setAvailableQuantity(quantity);
         item = inventoryRepository.save(item);
 
         inventoryUpdatedCounter.increment();

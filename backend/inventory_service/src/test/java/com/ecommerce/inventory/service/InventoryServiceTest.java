@@ -50,7 +50,7 @@ public class InventoryServiceTest {
     }
 
     @Test
-    void addStockNewShouldBeAddedToInventory() {
+    void updateStockNewShouldBeAddedToInventory() {
         when(inventoryRepository.findByProductId("product-123")).thenReturn(Optional.empty());
         when(inventoryRepository.save(any(InventoryItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -58,7 +58,7 @@ public class InventoryServiceTest {
         request.setProductId("product-123");
         request.setQuantity(10);
 
-        Optional<InventoryItem> result = inventoryService.addStock(request);
+        Optional<InventoryItem> result = inventoryService.updateStock(request);
 
         assertTrue(result.isPresent());
         InventoryItem item = result.get();
@@ -69,7 +69,7 @@ public class InventoryServiceTest {
     }
 
     @Test
-    void addStockExistingShouldBeUpdatedInInventory() {
+    void updateStockExistingShouldBeUpdatedInInventory() {
         InventoryItem existingItem = new InventoryItem("product-123", 10, 0);
         when(inventoryRepository.findByProductId("product-123")).thenReturn(Optional.of(existingItem));
         when(inventoryRepository.save(any(InventoryItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -78,7 +78,7 @@ public class InventoryServiceTest {
         request.setProductId("product-123");
         request.setQuantity(10);
         
-        Optional<InventoryItem> result = inventoryService.addStock(request);
+        Optional<InventoryItem> result = inventoryService.updateStock(request);
 
         assertTrue(result.isPresent());
         InventoryItem item = result.get();
@@ -254,14 +254,14 @@ public class InventoryServiceTest {
     }
 
     @Test
-    void addStockShouldRejectInvalidRequest() {
+    void updateStockShouldRejectInvalidRequest() {
         InventoryRequest request = new InventoryRequest();
         request.setProductId(" ");
         request.setQuantity(5);
 
         InvalidInventoryException ex = assertThrows(
                 InvalidInventoryException.class,
-                () -> inventoryService.addStock(request)
+                () -> inventoryService.updateStock(request)
         );
 
         assertEquals("Product ID is required", ex.getMessage());
@@ -310,7 +310,7 @@ public class InventoryServiceTest {
     void validateInventoryRequestShouldThrowWhenRequestIsNull() {
         InvalidInventoryException ex = assertThrows(
                 InvalidInventoryException.class,
-                () -> inventoryService.addStock(null)
+                () -> inventoryService.updateStock(null)
         );
 
         assertEquals("Inventory request is required", ex.getMessage());
@@ -325,7 +325,7 @@ public class InventoryServiceTest {
 
         InvalidInventoryException ex = assertThrows(
                 InvalidInventoryException.class,
-                () -> inventoryService.addStock(request)
+                () -> inventoryService.updateStock(request)
         );
         
         assertEquals("Product ID is required", ex.getMessage());
@@ -340,7 +340,7 @@ public class InventoryServiceTest {
         
         InvalidInventoryException ex = assertThrows(
                 InvalidInventoryException.class,
-                () -> inventoryService.addStock(request)
+                () -> inventoryService.updateStock(request)
         );
         
         assertEquals("Quantity must be greater than zero", ex.getMessage());

@@ -43,7 +43,7 @@ public class InventoryControllerTest {
     @Test
     void addStockShouldUpdateInventory() throws Exception {
         InventoryItem updatedItem = new InventoryItem("p1", 150, 0);
-        when(inventoryService.addStock(any(InventoryRequest.class))).thenReturn(Optional.of(updatedItem));
+        when(inventoryService.updateStock(any(InventoryRequest.class))).thenReturn(Optional.of(updatedItem));
 
         String requestJson = """
                 {
@@ -63,7 +63,7 @@ public class InventoryControllerTest {
 
     @Test
     void addStockShouldReturn404WhenInventoryItemNotFound() throws Exception {
-        when(inventoryService.addStock(any(InventoryRequest.class))).thenReturn(Optional.empty());
+        when(inventoryService.updateStock(any(InventoryRequest.class))).thenReturn(Optional.empty());
         String requestJson = """
                 {
                     "productId": "p1",

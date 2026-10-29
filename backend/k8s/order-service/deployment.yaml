@@ -34,3 +34,9 @@ spec:
 
             - name: INVENTORY_SERVICE_URL
               value: http://inventory-service:8081/inventory
+
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+              value: https://keycloak.ecommerce.local/realms/ecommerce
+
+            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
+              value: http://keycloak:8080/realms/ecommerce/protocol/openid-connect/certs              

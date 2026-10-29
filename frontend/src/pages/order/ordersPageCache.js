@@ -1,19 +1,23 @@
-let cachedOrders = [];
-let cachedHasLoaded = false;
+const cachedOrdersByUser = new Map();
 
-export function getOrdersPageCache() {
-  return {
-    orders: cachedOrders,
-    hasLoaded: cachedHasLoaded,
+export function getOrdersPageCache(userId) {
+  return cachedOrdersByUser.get(userId) || {
+    orders: [],
+    hasLoaded: false,
   };
 }
 
-export function setOrdersPageCache(orders) {
-  cachedOrders = orders;
-  cachedHasLoaded = true;
+export function setOrdersPageCache(userId, orders) {
+  cachedOrdersByUser.set(userId, {
+    orders,
+    hasLoaded: true,
+  });
 }
 
-export function resetOrdersPageCache() {
-  cachedOrders = [];
-  cachedHasLoaded = false;
+export function resetOrdersPageCache(userId) {
+  if (userId) {
+    cachedOrdersByUser.delete(userId);
+  } else {
+    cachedOrdersByUser.clear();
+  }
 }

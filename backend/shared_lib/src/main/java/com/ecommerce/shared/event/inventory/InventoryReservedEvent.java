@@ -5,6 +5,7 @@ import com.ecommerce.shared.event.EventType;
 
 public class InventoryReservedEvent extends Event {
 
+    private String orderId;
     private String productId;
     private Integer quantity;
 
@@ -13,12 +14,18 @@ public class InventoryReservedEvent extends Event {
     }
 
     public InventoryReservedEvent(
+            String orderId,
             String productId,
             Integer quantity) {
         super(EventType.INVENTORY_RESERVED);
 
+        this.orderId = orderId;
         this.productId = productId;
         this.quantity = quantity;
+    }
+
+    public String getOrderId() {
+        return orderId;
     }
 
     public String getProductId() {

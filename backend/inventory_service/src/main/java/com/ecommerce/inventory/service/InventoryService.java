@@ -48,7 +48,7 @@ public class InventoryService {
         evict = @CacheEvict(value = "inventoryList", allEntries = true)
     )
     @Transactional
-    public Optional<InventoryItem> addStock(InventoryRequest request) {
+    public Optional<InventoryItem> updateStock(InventoryRequest request) {
         validateInventoryRequest(request);
 
         String productId = request.getProductId();
@@ -57,7 +57,7 @@ public class InventoryService {
         InventoryItem item = inventoryRepository.findByProductId(productId)
                 .orElseGet(() -> new InventoryItem(productId, 0, 0));
 
-        item.setAvailableQuantity(item.getAvailableQuantity() + quantity);
+        item.setAvailableQuantity(quantity);
         item = inventoryRepository.save(item);
 
         inventoryUpdatedCounter.increment();
@@ -78,6 +78,7 @@ public class InventoryService {
     public Optional<InventoryItem> reserveStock(InventoryRequest request) {
         validateInventoryRequest(request);
 
+        String orderId = request.getOrderId();
         String productId = request.getProductId();
         Integer quantity = request.getQuantity();
 
@@ -86,6 +87,7 @@ public class InventoryService {
                     InventoryFailedEvent event = new InventoryFailedEvent(
                             "RESERVE_STOCK_FAILED",
                             "PRODUCT_NOT_FOUND");
+                    event.setOrderId(orderId);
                     event.setProductId(productId);
                     event.setQuantity(quantity);
                     kafkaProducer.sendInventoryFailedEvent(event);
@@ -97,6 +99,7 @@ public class InventoryService {
             InventoryFailedEvent event = new InventoryFailedEvent(
                     "RESERVE_STOCK_FAILED",
                     "INSUFFICIENT_STOCK");
+            event.setOrderId(orderId);
             event.setProductId(productId);
             event.setQuantity(quantity);
             kafkaProducer.sendInventoryFailedEvent(event);
@@ -112,6 +115,7 @@ public class InventoryService {
         inventoryUpdatedCounter.increment();
 
         kafkaProducer.sendInventoryReservedEvent(new InventoryReservedEvent(
+                orderId,
                 productId,
                 quantity));
 
@@ -134,6 +138,7 @@ public class InventoryService {
                     InventoryFailedEvent event = new InventoryFailedEvent(
                             "DEDUCT_STOCK_FAILED",
                             "PRODUCT_NOT_FOUND");
+                    event.setOrderId(request.getOrderId());
                     event.setProductId(productId);
                     event.setQuantity(quantity);
                     kafkaProducer.sendInventoryFailedEvent(event);
@@ -176,6 +181,7 @@ public class InventoryService {
                     InventoryFailedEvent event = new InventoryFailedEvent(
                             "RELEASE_STOCK_FAILED",
                             "PRODUCT_NOT_FOUND");
+                    event.setOrderId(request.getOrderId());
                     event.setProductId(productId);
                     event.setQuantity(quantity);
                     kafkaProducer.sendInventoryFailedEvent(event);

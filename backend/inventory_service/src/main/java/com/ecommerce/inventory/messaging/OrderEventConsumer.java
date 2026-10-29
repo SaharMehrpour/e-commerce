@@ -40,6 +40,7 @@ public class OrderEventConsumer {
         }
 
         InventoryRequest request = new InventoryRequest();
+        request.setOrderId(event.getOrderId());
         request.setProductId(event.getProductId());
         request.setQuantity(event.getQuantity());
 
@@ -67,6 +68,7 @@ public class OrderEventConsumer {
         }
 
         InventoryRequest request = new InventoryRequest();
+        request.setOrderId(event.getOrderId());
         request.setProductId(event.getProductId());
         request.setQuantity(event.getQuantity());
 
@@ -95,11 +97,13 @@ public class OrderEventConsumer {
         if (!event.getOldProductId().equals(event.getNewProductId())) {
 
             InventoryRequest releaseRequest = new InventoryRequest();
+            releaseRequest.setOrderId(event.getOrderId());
             releaseRequest.setProductId(event.getOldProductId());
             releaseRequest.setQuantity(event.getOldQuantity());
             inventoryService.releaseStock(releaseRequest);
 
             InventoryRequest reserveRequest = new InventoryRequest();
+            reserveRequest.setOrderId(event.getOrderId());
             reserveRequest.setProductId(event.getNewProductId());
             reserveRequest.setQuantity(event.getNewQuantity());
             inventoryService.reserveStock(reserveRequest);
@@ -110,12 +114,14 @@ public class OrderEventConsumer {
 
             if (quantityDelta > 0) {
                 InventoryRequest request = new InventoryRequest();
+                request.setOrderId(event.getOrderId());
                 request.setProductId(event.getNewProductId());
                 request.setQuantity(quantityDelta);
                 inventoryService.reserveStock(request);
 
             } else if (quantityDelta < 0) {
                 InventoryRequest request = new InventoryRequest();
+                request.setOrderId(event.getOrderId());
                 request.setProductId(event.getNewProductId());
                 request.setQuantity(Math.abs(quantityDelta));
                 inventoryService.releaseStock(request);

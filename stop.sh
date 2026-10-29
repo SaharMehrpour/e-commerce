@@ -5,6 +5,25 @@ RED='\033[1;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+usage() {
+    cat <<EOF
+Usage: ./stop.sh [mode] [options]
+
+Modes:
+  dev                 Start with Docker Compose (default)
+  k8s                 Start on Kubernetes (Minikube)
+
+Options:
+  no-hosts, no-hosts-removed, --no-hosts, --no-hosts-removed    Skip cleaning /etc/hosts (k8s only)
+  -h, --help, help        Show this help and exit
+
+Examples:
+  ./stop.sh                      # dev mode, with build
+  ./stop.sh k8s                  # k8s mode, with build
+  ./stop.sh k8s --no-hosts       # k8s mode, don't touch /etc/hosts
+EOF
+}
+
 MODE=${1:-dev}
 NO_HOSTS_REMOVED=false
 
@@ -15,6 +34,10 @@ echo "=================================="
 
 for arg in "$@"; do
     case "$arg" in
+        -h|--help|help)
+            usage
+            exit 0
+            ;;
         k8s|dev)
             MODE="$arg"
             ;;
@@ -47,13 +70,32 @@ if [ "$MODE" = "k8s" ]; then
     echo ""
     echo "🚇 Stopping minikube tunnel..."
 
-    if [ -f /tmp/minikube-tunnel.pid ]; then
-        kill "$(cat /tmp/minikube-tunnel.pid)" 2>/dev/null || true
-        rm -f /tmp/minikube-tunnel.pid
-        echo "Tunnel stopped."
+    PID_FILE="/tmp/minikube-tunnel.pid"
+
+    if [ -f "$PID_FILE" ]; then
+        tunnel_pid="$(cat "$PID_FILE")"
+
+        if [[ "$tunnel_pid" =~ ^[0-9]+$ ]] &&
+        kill -0 "$tunnel_pid" 2>/dev/null; then
+
+            process_command="$(ps -p "$tunnel_pid" -o command= 2>/dev/null || true)"
+
+            case "$process_command" in
+                *minikube*tunnel*)
+                    kill "$tunnel_pid" 2>/dev/null || true
+                    echo "Sent stop signal to tunnel process $tunnel_pid."
+                    ;;
+                *)
+                    echo "PID $tunnel_pid is not a recognized Minikube tunnel process; leaving it untouched."
+                    ;;
+            esac
+        else
+            echo "Tunnel is stopped."
+        fi
+
+        rm -f "$PID_FILE"
     else
-        pkill -f "minikube tunnel" 2>/dev/null || true
-        echo "Tunnel cleanup done."
+        echo "No tunnel PID file found; no process was terminated."
     fi
 
     echo ""

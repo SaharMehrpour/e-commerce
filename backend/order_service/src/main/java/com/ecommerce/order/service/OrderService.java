@@ -1,19 +1,16 @@
 package com.ecommerce.order.service;
 
-import com.ecommerce.order.client.InventoryClient;
 import com.ecommerce.order.domain.Order;
 import com.ecommerce.order.messaging.OrderEventProducer;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.shared.domain.order.OrderStatus;
-import com.ecommerce.shared.dto.inventory.InventoryResponse;
 import com.ecommerce.shared.dto.order.CreateOrderRequest;
 import com.ecommerce.shared.dto.order.UpdateOrderRequest;
 import com.ecommerce.shared.event.order.OrderCancelledEvent;
 import com.ecommerce.shared.event.order.OrderCreatedEvent;
 import com.ecommerce.shared.event.order.OrderUpdatedEvent;
+import com.ecommerce.shared.exception.auth.NotAuthorizedException;
 import com.ecommerce.shared.exception.inventory.InvalidOrderException;
-import com.ecommerce.shared.exception.inventory.InventoryNotEnoughException;
-import com.ecommerce.shared.exception.inventory.InventoryNotFoundException;
 import com.ecommerce.shared.exception.order.OrderAlreadyCancelledException;
 import com.ecommerce.shared.exception.order.OrderNotFoundException;
 import com.ecommerce.shared.exception.order.OrderNotUpdatableException;
@@ -22,9 +19,8 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +32,7 @@ public class OrderService {
 
     private final OrderRepository repository;
     private final OrderEventProducer kafkaProducer;
-    private final InventoryClient inventoryClient;
+    private final OrderCacheService orderCacheService;
 
     private final Counter ordersCreatedCounter;
     private final Counter ordersCancelledCounter;
@@ -44,11 +40,11 @@ public class OrderService {
     public OrderService(
             OrderRepository repository,
             OrderEventProducer kafkaProducer,
-            InventoryClient inventoryClient,
+            OrderCacheService orderCacheService,
             MeterRegistry meterRegistry) {
         this.repository = repository;
         this.kafkaProducer = kafkaProducer;
-        this.inventoryClient = inventoryClient;
+        this.orderCacheService = orderCacheService;
 
         this.ordersCreatedCounter = Counter.builder("orders.created")
                 .description("Total number of orders created")
@@ -59,30 +55,30 @@ public class OrderService {
                 .register(meterRegistry);
     }
 
-    @Caching(put = @CachePut(value = "orders", key = "#result.id", unless = "#result.id == null"), evict = @CacheEvict(value = "orders", key = "'all'"))
+    @Caching(put = @CachePut(value = "orders", key = "#result.id", unless = "#result.id == null"), evict = {
+            @CacheEvict(value = "orders", key = "'all'"),
+            @CacheEvict(value = "orders", key = "'user:' + #result.userId")
+    })
     @Transactional
-    public Order createOrder(CreateOrderRequest request) {
+    public Order createOrder(
+            CreateOrderRequest request,
+            JwtAuthenticationToken authentication) {
 
         if (request == null
-                || request.getUserId() == null || request.getUserId().isBlank()
-                || request.getProductId() == null || request.getProductId().isBlank()
-                || request.getQuantity() == null || request.getQuantity() <= 0) {
+                || request.getProductId() == null
+                || request.getProductId().isBlank()
+                || request.getQuantity() == null
+                || request.getQuantity() <= 0) {
             throw new InvalidOrderException("Invalid order request");
         }
 
-        InventoryResponse inventoryResponse = Optional.ofNullable(inventoryClient.getInventory(request.getProductId()))
-                .orElseThrow(() -> new InventoryNotFoundException(
-                        "Inventory item not found for product " + request.getProductId()));
-
-        if (inventoryResponse.getAvailableQuantity() < request.getQuantity()) {
-            throw new InventoryNotEnoughException("Insufficient stock");
-        }
+        String authenticatedUserId = authentication.getToken().getSubject();
 
         Order order = new Order();
-        order.setUserId(request.getUserId());
+        order.setUserId(authenticatedUserId);
         order.setProductId(request.getProductId());
         order.setQuantity(request.getQuantity());
-        order.setStatus(OrderStatus.CREATED);
+        order.setStatus(OrderStatus.PENDING);
 
         Order savedOrder = repository.save(order);
 
@@ -99,25 +95,66 @@ public class OrderService {
         return savedOrder;
     }
 
-    @Cacheable(value = "orders", key = "'all'")
-    public List<Order> getOrders() {
-        return repository.findAll();
+    public List<Order> getOrders(JwtAuthenticationToken authentication) {
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isAdmin) {
+            return orderCacheService.getAllOrders();
+        }
+
+        String authenticatedUserId = authentication.getToken().getSubject();
+
+        return orderCacheService.getOrdersForUser(authenticatedUserId);
     }
 
-    @Cacheable(value = "orders", key = "#id")
-    public Optional<Order> getOrder(String id) {
-        return repository.findById(id);
+    public Optional<Order> getOrder(
+            String id,
+            JwtAuthenticationToken authentication) {
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        Optional<Order> order = orderCacheService.getOrder(id);
+
+        if (order.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (isAdmin) {
+            return order;
+        }
+
+        String authenticatedUserId = authentication.getToken().getSubject();
+
+        return order.filter(existingOrder -> authenticatedUserId.equals(existingOrder.getUserId()));
     }
 
-    @Caching(put = @CachePut(value = "orders", key = "#id", unless = "#result == null"), evict = @CacheEvict(value = "orders", key = "'all'"))
+    @Caching(put = @CachePut(value = "orders", key = "#id"), evict = {
+            @CacheEvict(value = "orders", key = "'all'"),
+            @CacheEvict(value = "orders", key = "'user:' + #result.get().userId")
+    })
     @Transactional
-    public Optional<Order> cancelOrder(String id) {
+    public Optional<Order> cancelOrder(
+            String id,
+            JwtAuthenticationToken authentication) {
 
         Order order = repository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found"));
 
         if (OrderStatus.CANCELLED.equals(order.getStatus())) {
             throw new OrderAlreadyCancelledException("Already cancelled");
+        }
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        String authenticatedUserId = authentication.getToken().getSubject();
+
+        if (!isAdmin && !authenticatedUserId.equals(order.getUserId())) {
+            throw new NotAuthorizedException(
+                    "Not Authorized to cancel this order");
         }
 
         order.setStatus(OrderStatus.CANCELLED);
@@ -137,19 +174,36 @@ public class OrderService {
         return Optional.of(updated);
     }
 
-    @Caching(put = @CachePut(value = "orders", key = "#id", unless = "#result == null"), evict = @CacheEvict(value = "orders", key = "'all'"))
+    @Caching(put = @CachePut(value = "orders", key = "#id"), evict = {
+            @CacheEvict(value = "orders", key = "'all'"),
+            @CacheEvict(value = "orders", key = "'user:' + #result.get().userId")
+    })
     @Transactional
-    public Optional<Order> updateOrder(String id, UpdateOrderRequest request) {
+    public Optional<Order> updateOrder(
+            String id,
+            UpdateOrderRequest request,
+            JwtAuthenticationToken authentication) {
 
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");
         }
-        
+
         Order order = repository.findById(id)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found"));
 
         if (OrderStatus.CANCELLED.equals(order.getStatus())) {
-            throw new OrderNotUpdatableException("Cannot update cancelled order");
+            throw new OrderNotUpdatableException(
+                    "Cannot update cancelled order");
+        }
+
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        String authenticatedUserId = authentication.getToken().getSubject();
+
+        if (!isAdmin && !authenticatedUserId.equals(order.getUserId())) {
+            throw new NotAuthorizedException(
+                    "Not Authorized to update this order");
         }
 
         String oldProductId = order.getProductId();

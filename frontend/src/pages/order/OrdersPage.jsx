@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { getOrders } from "../../api/orders";
 import { getOrdersPageCache, setOrdersPageCache } from "./ordersPageCache";
+import { AuthContext } from "../../auth/AuthContext";
 
 function OrdersPage() {
-  const initialCache = getOrdersPageCache();
+  const { keycloak, authenticated } = useContext(AuthContext);
+  const userId = keycloak?.tokenParsed?.sub;
+  const initialCache = getOrdersPageCache(userId);
+
   const [orders, setOrders] = useState(initialCache.orders);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -14,9 +18,28 @@ function OrdersPage() {
     setIsLoading(true);
     setHasLoaded(true);
 
+    if (!authenticated) {
+      setOrders([]);
+      setHasLoaded(true);
+      setError("You must be logged in to view orders.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const data = await getOrders();
-      setOrdersPageCache(data);
+      await keycloak.updateToken(30);
+
+      const data = await getOrders(keycloak);
+
+      setOrdersPageCache(userId, data);
+
+      console.log("Orders fetched from API:", data);
+      console.log(
+        "Orders cached for user:",
+        userId,
+        getOrdersPageCache(userId)
+      );
+
       setOrders(data);
     } catch (error) {
       setError(error.message);

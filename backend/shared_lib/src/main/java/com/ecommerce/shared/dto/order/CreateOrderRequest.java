@@ -6,9 +6,6 @@ import jakarta.validation.constraints.NotNull;
 
 public class CreateOrderRequest {
 
-    @NotBlank(message = "User ID is required")
-    private String userId;
-
     @NotBlank(message = "Product ID is required")
     private String productId;
 
@@ -17,14 +14,6 @@ public class CreateOrderRequest {
     private Integer quantity;
 
     public CreateOrderRequest() {}
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
 
     public String getProductId() {
         return productId;

@@ -3,3 +3,5 @@
 *.log
 .vscode
 e-commerce.code-workspace
+certs
+.generated/

@@ -2,12 +2,14 @@ import { getApiUrl } from "./config";
 
 const BASE_URL = `${getApiUrl()}/orders`;
 
-export async function createOrder(order) {
+export async function createOrder(order, keycloak) {
+    await keycloak.updateToken(30);
 
     const response = await fetch(BASE_URL, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${keycloak.token}`
         },
         body: JSON.stringify(order)
     });
@@ -17,26 +19,41 @@ export async function createOrder(order) {
     return response.json();
 }
 
-export async function getOrders() {
+export async function getOrders(keycloak) {
+    if (!keycloak?.authenticated || !keycloak?.token) {
+        throw new Error("You must be logged in to view orders.");
+    }
 
-    const response = await fetch(BASE_URL);
+    await keycloak.updateToken(30);
+
+    const response = await fetch(BASE_URL, {
+        headers: {
+            "Authorization": `Bearer ${keycloak.token}`
+        }
+    });
+
     await processError(response);
     return response.json();
 }
 
-export async function getOrderById(id) {
+export async function getOrderById(id, keycloak) {
 
-    const response = await fetch(`${BASE_URL}/${id}`);
+    const response = await fetch(`${BASE_URL}/${id}`, {
+        headers: {
+            "Authorization": `Bearer ${keycloak.token}`
+        }
+    });
     await processError(response);
     return response.json();
 }
 
-export async function updateOrder(id, updatedOrder) {
+export async function updateOrder(id, updatedOrder, keycloak) {
 
     const response = await fetch(`${BASE_URL}/${id}`, {
         method: "PATCH",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${keycloak.token}`
         },
         body: JSON.stringify(updatedOrder)
     });
@@ -45,9 +62,14 @@ export async function updateOrder(id, updatedOrder) {
     return response.json();
 }
 
-export async function cancelOrderById(id) {
+export async function cancelOrderById(id, keycloak) {
 
-    const response = await fetch(`${BASE_URL}/${id}/cancel`, { method: "PATCH" });
+    const response = await fetch(`${BASE_URL}/${id}/cancel`, {
+        method: "PATCH",
+        headers: {
+            "Authorization": `Bearer ${keycloak.token}`
+        }
+    });
     await processError(response);
     return response.json();
 }

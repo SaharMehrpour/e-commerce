@@ -5,6 +5,16 @@ metadata:
   namespace: ecommerce
 spec:
   ingressClassName: nginx
+
+  tls:
+    - hosts:
+        - ecommerce.local
+      secretName: ecommerce-local-tls
+
+    - hosts:
+        - keycloak.ecommerce.local
+      secretName: ecommerce-local-tls
+
   rules:
     - host: ecommerce.local
       http:
@@ -22,5 +32,16 @@ spec:
             backend:
               service:
                 name: gateway-service
+                port:
+                  number: 8080
+
+    - host: keycloak.ecommerce.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
                 port:
                   number: 8080

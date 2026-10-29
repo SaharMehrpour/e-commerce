@@ -6,6 +6,27 @@ YELLOW='\033[1;33m'
 RED='\033[1;31m'
 NC='\033[0m'
 
+usage() {
+    cat <<EOF
+Usage: ./start.sh [mode] [options]
+
+Modes:
+  dev                 Start with Docker Compose (default)
+  k8s                 Start on Kubernetes (Minikube)
+
+Options:
+  no-build, --no-build    Skip building Docker images
+  no-hosts, --no-hosts    Skip editing /etc/hosts (k8s only)
+  -h, --help, help        Show this help and exit
+
+Examples:
+  ./start.sh                      # dev mode, with build
+  ./start.sh k8s                  # k8s mode, with build
+  ./start.sh k8s --no-build       # k8s mode, reuse existing images
+  ./start.sh k8s --no-hosts       # k8s mode, don't touch /etc/hosts
+EOF
+}
+
 MODE="dev"
 NO_BUILD=false
 NO_HOSTS=false
@@ -21,6 +42,10 @@ echo "=================================="
 
 for arg in "$@"; do
     case "$arg" in
+        -h|--help|help)
+            usage
+            exit 0
+            ;;
         k8s|dev)
             MODE="$arg"
             ;;
@@ -145,8 +170,52 @@ if [ "$MODE" = "k8s" ]; then
     done
 
     echo ""
+    echo "🔒 Ensuring TLS secret..."
+    CERT_DIR="$SCRIPT_DIR/certs"   # use $SCRIPT_DIR/backend/certs if that's where your certs live
+
+    if [ ! -f "$CERT_DIR/tls.crt" ] || [ ! -f "$CERT_DIR/tls.key" ]; then
+        if command -v mkcert >/dev/null 2>&1; then
+            mkcert -install
+            mkdir -p "$CERT_DIR"
+            mkcert -cert-file "$CERT_DIR/tls.crt" -key-file "$CERT_DIR/tls.key" \
+                ecommerce.local keycloak.ecommerce.local
+        else
+            echo -e "${YELLOW}No certs found and mkcert is not installed; ingress will use its default self-signed cert.${NC}"
+        fi
+    fi
+
+    if [ -f "$CERT_DIR/tls.crt" ] && [ -f "$CERT_DIR/tls.key" ]; then
+        kubectl create secret tls ecommerce-local-tls \
+            --cert="$CERT_DIR/tls.crt" --key="$CERT_DIR/tls.key" \
+            -n ecommerce --dry-run=client -o yaml | kubectl apply -f -
+    fi
+
+    echo ""
+    echo "🔐 Creating Keycloak realm ConfigMap..."
+    kubectl create configmap keycloak-realm-import \
+        --from-file=ecommerce-realm.json=keycloak-import/ecommerce-realm.json \
+        -n ecommerce --dry-run=client -o yaml | kubectl apply -f -
+
+    echo ""
     echo "📦 Applying Kubernetes manifests..."
-    kubectl apply -f k8s/ --recursive
+
+    MAX_ATTEMPTS=6
+
+    for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+        if kubectl apply -f k8s/ --recursive; then
+            echo -e "${GREEN}✅ Kubernetes manifests applied.${NC}"
+            break
+        fi
+
+        if [ "$attempt" -eq "$MAX_ATTEMPTS" ]; then
+            echo -e "${RED}Failed to apply Kubernetes manifests after ${MAX_ATTEMPTS} attempts.${NC}"
+            show_k8s_status
+            exit 1
+        fi
+
+        echo -e "${YELLOW}Manifest application failed. Retrying in 5 seconds (${attempt}/${MAX_ATTEMPTS})...${NC}"
+        sleep 5
+    done
 
     echo ""
     echo "♻️ Restarting deployments..."
@@ -190,27 +259,26 @@ if [ "$MODE" = "k8s" ]; then
         HOST_ENTRY="127.0.0.1 ecommerce.local"
 
         echo ""
-        echo "🧠 Ensuring /etc/hosts entry..."
+        echo "🧠 Ensuring /etc/hosts entries..."
 
-        if ! grep -q "ecommerce.local" /etc/hosts; then
-            echo -e "${YELLOW}Adding hosts entry...${NC}"
-            echo "$HOST_ENTRY" | sudo tee -a /etc/hosts >/dev/null
-        fi
+        for host in ecommerce.local keycloak.ecommerce.local; do
+            if ! grep -qE "(^|[[:space:]])${host}([[:space:]]|$)" /etc/hosts; then
+                echo -e "${YELLOW}Adding hosts entry for ${host}...${NC}"
+                echo "127.0.0.1 ${host}" | sudo tee -a /etc/hosts >/dev/null
+            fi
+        done
     fi
 
+    
     echo ""
-    echo "🚇 Starting minikube tunnel..."
-
-    if ! pgrep -f "minikube tunnel" >/dev/null; then
-        nohup minikube tunnel >/tmp/minikube-tunnel.log 2>&1 &
-        echo $! > /tmp/minikube-tunnel.pid
-    else
-        echo "Tunnel already running."
-    fi
+    echo "🚇 Minikube tunnel must run in a separate terminal."
+    echo -e "${YELLOW}Run: minikube tunnel${NC}"
+    echo -e "${YELLOW}Keep that terminal open while using the application.${NC}"
 
     echo ""
     echo "=================================="
     echo "🌐 http://ecommerce.local"
+    echo "🔑 http://keycloak.ecommerce.local"
     echo "=================================="
 
 # =========================
@@ -227,16 +295,54 @@ else
         exit 1
     }
 
+    command -v jq >/dev/null 2>&1 || {
+        echo -e "${RED}Error: jq not installed (brew install jq).${NC}"
+        exit 1
+    }
+
     if [ "$NO_BUILD" = false ]; then
         echo "🔨 Building images via docker compose..."
         docker compose -f docker-compose.yml build
     fi
 
+    echo ""
+    echo "🔐 Preparing Keycloak realm for docker (SSL not required)..."
+    mkdir -p .generated/keycloak
+    jq '.sslRequired = "none"' keycloak-import/ecommerce-realm.json \
+        > .generated/keycloak/ecommerce-realm.json
+
     docker compose -f docker-compose.yml up -d
+    # Keycloak uses a throwaway DB, so recreate it to re-import the realm
+    docker compose -f docker-compose.yml up -d --force-recreate keycloak
+
+    echo ""
+    echo "⏳ Configuring Keycloak master realm..."
+    KC_READY=false
+    for i in {1..30}; do
+        if docker compose -f docker-compose.yml exec -T keycloak \
+            /opt/keycloak/bin/kcadm.sh config credentials \
+            --server http://localhost:8080 --realm master \
+            --user admin --password admin >/dev/null 2>&1; then
+            KC_READY=true
+            break
+        fi
+        echo "Waiting for Keycloak... ($i/30)"
+        sleep 2
+    done
+
+    if [ "$KC_READY" = true ]; then
+        docker compose -f docker-compose.yml exec -T keycloak \
+            /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE
+        echo -e "${GREEN}✅ Keycloak master realm configured.${NC}"
+    else
+        echo -e "${YELLOW}Keycloak not ready after 60s; master realm not updated.${NC}"
+        echo -e "${YELLOW}Check: docker compose -f docker-compose.yml logs keycloak${NC}"
+    fi
 
     echo ""
     echo "Frontend  : http://localhost:5173"
     echo "Backend   : http://localhost:8080"
+    echo "Keycloak  : http://localhost:8180"
     echo "Prometheus: http://localhost:9090"
     echo "=================================="
 fi

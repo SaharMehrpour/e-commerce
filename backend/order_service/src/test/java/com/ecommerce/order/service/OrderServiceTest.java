@@ -1,18 +1,14 @@
 package com.ecommerce.order.service;
 
-import com.ecommerce.order.client.InventoryClient;
 import com.ecommerce.order.domain.Order;
 import com.ecommerce.order.messaging.OrderEventProducer;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.shared.domain.order.OrderStatus;
-import com.ecommerce.shared.dto.inventory.InventoryResponse;
 import com.ecommerce.shared.dto.order.CreateOrderRequest;
-import com.ecommerce.shared.dto.order.UpdateOrderRequest;
 import com.ecommerce.shared.event.order.OrderCancelledEvent;
 import com.ecommerce.shared.event.order.OrderCreatedEvent;
 import com.ecommerce.shared.event.order.OrderUpdatedEvent;
-import com.ecommerce.shared.exception.inventory.InventoryNotEnoughException;
-import com.ecommerce.shared.exception.inventory.InventoryNotFoundException;
+import com.ecommerce.shared.exception.auth.NotAuthorizedException;
 import com.ecommerce.shared.exception.order.OrderNotFoundException;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -26,6 +22,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +37,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
 
+    private static final String USER_ID = "u1";
+    private static final String ORDER_ID = "order-1";
+
     @Mock
     private OrderRepository repository;
 
@@ -43,10 +47,9 @@ class OrderServiceTest {
     private OrderEventProducer kafkaProducer;
 
     @Mock
-    private InventoryClient inventoryClient;
+    private OrderCacheService orderCacheService;
 
     private MeterRegistry meterRegistry;
-
     private OrderService orderService;
 
     @BeforeEach
@@ -56,190 +59,379 @@ class OrderServiceTest {
         orderService = new OrderService(
                 repository,
                 kafkaProducer,
-                inventoryClient,
+                orderCacheService,
                 meterRegistry);
+    }
+
+    private JwtAuthenticationToken customerAuthentication() {
+        return authentication(USER_ID, "ROLE_CUSTOMER");
+    }
+
+    private JwtAuthenticationToken adminAuthentication() {
+        return authentication("admin-1", "ROLE_ADMIN");
+    }
+
+    private JwtAuthenticationToken authentication(String userId, String role) {
+        Instant now = Instant.now();
+
+        Jwt jwt = Jwt.withTokenValue("test-token")
+                .header("alg", "none")
+                .subject(userId)
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(3600))
+                .build();
+
+        return new JwtAuthenticationToken(
+                jwt,
+                List.of(new SimpleGrantedAuthority(role)));
     }
 
     @Test
     void createOrderShouldSaveOrderAndPublishEvent() {
-
         CreateOrderRequest request = new CreateOrderRequest();
-        request.setUserId("u1");
         request.setProductId("p1");
         request.setQuantity(2);
 
-        InventoryResponse mockInventory = new InventoryResponse();
-        mockInventory.setProductId("p1");
-        mockInventory.setAvailableQuantity(10);
+        when(repository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order order = invocation.getArgument(0);
+            order.setId(ORDER_ID);
+            return order;
+        });
 
-        Order mockSavedOrder = new Order();
-        mockSavedOrder.setId("order-1");
-        mockSavedOrder.setUserId("u1");
-        mockSavedOrder.setProductId("p1");
-        mockSavedOrder.setQuantity(2);
-        mockSavedOrder.setStatus(OrderStatus.CREATED);
-
-        when(inventoryClient.getInventory("p1")).thenReturn(mockInventory);
-        when(repository.save(any(Order.class))).thenReturn(mockSavedOrder);
-
-        Order createdOrder = orderService.createOrder(request);
+        Order createdOrder = orderService.createOrder(
+                request,
+                customerAuthentication());
 
         assertNotNull(createdOrder);
-        assertEquals("order-1", createdOrder.getId());
-        assertEquals(OrderStatus.CREATED, createdOrder.getStatus());
+        assertEquals(ORDER_ID, createdOrder.getId());
+        assertEquals(USER_ID, createdOrder.getUserId());
+        assertEquals("p1", createdOrder.getProductId());
+        assertEquals(2, createdOrder.getQuantity());
+        assertEquals(OrderStatus.PENDING, createdOrder.getStatus());
 
-        verify(repository, times(1)).save(any(Order.class));
+        verify(repository).save(any(Order.class));
 
         ArgumentCaptor<OrderCreatedEvent> eventCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
 
-        verify(kafkaProducer, times(1))
-                .sendOrderCreatedEvent(eventCaptor.capture());
+        verify(kafkaProducer).sendOrderCreatedEvent(eventCaptor.capture());
 
         OrderCreatedEvent sentEvent = eventCaptor.getValue();
 
-        assertEquals("order-1", sentEvent.getOrderId());
-        assertEquals("u1", sentEvent.getUserId());
+        assertEquals(ORDER_ID, sentEvent.getOrderId());
+        assertEquals(USER_ID, sentEvent.getUserId());
         assertEquals("p1", sentEvent.getProductId());
         assertEquals(2, sentEvent.getQuantity());
-        assertEquals(OrderStatus.CREATED, sentEvent.getStatus());
+        assertEquals(OrderStatus.PENDING, sentEvent.getStatus());
     }
 
     @Test
-    void createOrderShouldThrowWhenInventoryMissing() {
+    void createOrderShouldThrowWhenRequestIsNull() {
+        assertThrows(
+                com.ecommerce.shared.exception.inventory.InvalidOrderException.class,
+                () -> orderService.createOrder(null, customerAuthentication()));
 
+        verifyNoInteractions(repository, kafkaProducer);
+    }
+
+    @Test
+    void createOrderShouldThrowWhenProductIdIsMissing() {
         CreateOrderRequest request = new CreateOrderRequest();
-        request.setUserId("u1");
-        request.setProductId("p1");
         request.setQuantity(2);
 
-        when(inventoryClient.getInventory("p1")).thenReturn(null);
+        assertThrows(
+                com.ecommerce.shared.exception.inventory.InvalidOrderException.class,
+                () -> orderService.createOrder(request, customerAuthentication()));
 
-        InventoryNotFoundException ex = assertThrows(
-                InventoryNotFoundException.class,
-                () -> orderService.createOrder(request));
-
-        assertEquals("Inventory item not found for product p1", ex.getMessage());
-
-        verify(repository, never()).save(any());
-        verifyNoInteractions(kafkaProducer);
+        verifyNoInteractions(repository, kafkaProducer);
     }
 
     @Test
-    void createOrderShouldThrowWhenNotEnoughStock() {
-
+    void createOrderShouldThrowWhenQuantityIsNotPositive() {
         CreateOrderRequest request = new CreateOrderRequest();
-        request.setUserId("u1");
         request.setProductId("p1");
-        request.setQuantity(5);
+        request.setQuantity(0);
 
-        InventoryResponse mockInventory = new InventoryResponse();
-        mockInventory.setAvailableQuantity(2);
+        assertThrows(
+                com.ecommerce.shared.exception.inventory.InvalidOrderException.class,
+                () -> orderService.createOrder(request, customerAuthentication()));
 
-        when(inventoryClient.getInventory("p1")).thenReturn(mockInventory);
-
-        InventoryNotEnoughException ex = assertThrows(
-                InventoryNotEnoughException.class,
-                () -> orderService.createOrder(request));
-
-        assertEquals("Insufficient stock", ex.getMessage());
-
-        verifyNoInteractions(repository);
-        verifyNoInteractions(kafkaProducer);
+        verifyNoInteractions(repository, kafkaProducer);
     }
 
     @Test
-    void getOrderShouldReturnRepositoryOrderById() {
+    void getOrderShouldReturnOrderForOwner() {
         Order order = new Order();
-        when(repository.findById("order-1")).thenReturn(Optional.of(order));
+        order.setId(ORDER_ID);
+        order.setUserId(USER_ID);
 
-        Optional<Order> foundOrder = orderService.getOrder("order-1");
+        when(orderCacheService.getOrder(ORDER_ID))
+                .thenReturn(Optional.of(order));
+
+        Optional<Order> foundOrder = orderService.getOrder(
+                ORDER_ID,
+                customerAuthentication());
 
         assertTrue(foundOrder.isPresent());
-        verify(repository).findById("order-1");
+        assertSame(order, foundOrder.get());
+
+        verify(orderCacheService).getOrder(ORDER_ID);
     }
 
     @Test
-    void getOrdersShouldReturnRepositoryOrders() {
+    void getOrderShouldReturnEmptyWhenOrderBelongsToAnotherUser() {
+        Order order = new Order();
+        order.setId(ORDER_ID);
+        order.setUserId("another-user");
 
+        when(orderCacheService.getOrder(ORDER_ID))
+                .thenReturn(Optional.of(order));
+
+        Optional<Order> foundOrder = orderService.getOrder(
+                ORDER_ID,
+                customerAuthentication());
+
+        assertTrue(foundOrder.isEmpty());
+    }
+
+    @Test
+    void getOrderShouldReturnOrderForAdmin() {
+        Order order = new Order();
+        order.setId(ORDER_ID);
+        order.setUserId("another-user");
+
+        when(orderCacheService.getOrder(ORDER_ID))
+                .thenReturn(Optional.of(order));
+
+        Optional<Order> foundOrder = orderService.getOrder(
+                ORDER_ID,
+                adminAuthentication());
+
+        assertTrue(foundOrder.isPresent());
+        assertSame(order, foundOrder.get());
+    }
+
+    @Test
+    void getOrderShouldReturnEmptyWhenOrderDoesNotExist() {
+        when(orderCacheService.getOrder(ORDER_ID))
+                .thenReturn(Optional.empty());
+
+        Optional<Order> foundOrder = orderService.getOrder(
+                ORDER_ID,
+                customerAuthentication());
+
+        assertTrue(foundOrder.isEmpty());
+    }
+
+    @Test
+    void getOrdersShouldReturnOrdersForAuthenticatedUser() {
+        Order first = new Order();
+        first.setUserId(USER_ID);
+
+        Order second = new Order();
+        second.setUserId(USER_ID);
+
+        List<Order> expectedOrders = List.of(first, second);
+
+        when(orderCacheService.getOrdersForUser(USER_ID))
+                .thenReturn(expectedOrders);
+
+        List<Order> orders = orderService.getOrders(customerAuthentication());
+
+        assertEquals(2, orders.size());
+        assertEquals(expectedOrders, orders);
+
+        verify(orderCacheService).getOrdersForUser(USER_ID);
+        verify(orderCacheService, never()).getAllOrders();
+    }
+
+    @Test
+    void getOrdersShouldReturnAllOrdersForAdmin() {
         Order first = new Order();
         Order second = new Order();
 
-        when(repository.findAll()).thenReturn(List.of(first, second));
+        List<Order> expectedOrders = List.of(first, second);
 
-        List<Order> orders = orderService.getOrders();
+        when(orderCacheService.getAllOrders())
+                .thenReturn(expectedOrders);
+
+        List<Order> orders = orderService.getOrders(adminAuthentication());
 
         assertEquals(2, orders.size());
-        verify(repository).findAll();
+        assertEquals(expectedOrders, orders);
+
+        verify(orderCacheService).getAllOrders();
+        verify(orderCacheService, never()).getOrdersForUser(anyString());
     }
 
     @Test
     void cancelOrderShouldPersistCancelledStatus() {
-
         Order order = new Order();
-        order.setId("order-1");
-        order.setUserId("u1");
+        order.setId(ORDER_ID);
+        order.setUserId(USER_ID);
         order.setProductId("p1");
         order.setQuantity(2);
         order.setStatus(OrderStatus.CREATED);
 
-        when(repository.findById("order-1")).thenReturn(Optional.of(order));
-        when(repository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(repository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        Optional<Order> result = orderService.cancelOrder("order-1");
+        Optional<Order> result = orderService.cancelOrder(
+                ORDER_ID,
+                customerAuthentication());
 
         assertTrue(result.isPresent());
         assertEquals(OrderStatus.CANCELLED, result.get().getStatus());
 
         verify(repository).save(order);
-
-        verify(kafkaProducer).sendOrderCancelledEvent(any(OrderCancelledEvent.class));
+        verify(kafkaProducer).sendOrderCancelledEvent(
+                any(OrderCancelledEvent.class));
     }
 
     @Test
-    void updateOrderShouldUpdateFields() {
-
+    void cancelOrderShouldAllowAdminToCancelAnotherUsersOrder() {
         Order order = new Order();
-        order.setId("order-1");
+        order.setId(ORDER_ID);
+        order.setUserId("another-user");
         order.setProductId("p1");
         order.setQuantity(2);
         order.setStatus(OrderStatus.CREATED);
 
-        when(repository.findById("order-1")).thenReturn(Optional.of(order));
-        when(repository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(repository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        UpdateOrderRequest request = new UpdateOrderRequest();
-        request.setProductId("new-p");
-        request.setQuantity(10);
+        Optional<Order> result = orderService.cancelOrder(
+                ORDER_ID,
+                adminAuthentication());
 
-        Optional<Order> updated = orderService.updateOrder("order-1", request);
+        assertTrue(result.isPresent());
+        assertEquals(OrderStatus.CANCELLED, result.get().getStatus());
 
-        assertTrue(updated.isPresent());
-
-        verify(kafkaProducer).sendOrderUpdatedEvent(any(OrderUpdatedEvent.class));
+        verify(repository).save(order);
+        verify(kafkaProducer).sendOrderCancelledEvent(
+                any(OrderCancelledEvent.class));
     }
 
     @Test
-    void updateOrderShouldThrowWhenRequestNull() {
-        IllegalArgumentException ex = assertThrows(
-            IllegalArgumentException.class,
-            () -> orderService.updateOrder("order-1", null));
+    void cancelOrderShouldRejectAnotherUsersOrder() {
+        Order order = new Order();
+        order.setId(ORDER_ID);
+        order.setUserId("another-user");
+        order.setProductId("p1");
+        order.setQuantity(2);
+        order.setStatus(OrderStatus.CREATED);
 
-        assertEquals("Request cannot be null", ex.getMessage());
-        verifyNoInteractions(repository);
+        when(repository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+
+        assertThrows(
+                NotAuthorizedException.class,
+                () -> orderService.cancelOrder(
+                        ORDER_ID,
+                        customerAuthentication()));
+
+        verify(repository, never()).save(any(Order.class));
+        verifyNoInteractions(kafkaProducer);
+    }
+
+    @Test
+    void cancelOrderShouldThrowWhenOrderNotFound() {
+        when(repository.findById(ORDER_ID)).thenReturn(Optional.empty());
+
+        assertThrows(
+                OrderNotFoundException.class,
+                () -> orderService.cancelOrder(
+                        ORDER_ID,
+                        customerAuthentication()));
+
+        verify(repository, never()).save(any(Order.class));
+        verifyNoInteractions(kafkaProducer);
+    }
+
+    @Test
+    void updateOrderShouldUpdateFields() {
+        Order order = new Order();
+        order.setId(ORDER_ID);
+        order.setUserId(USER_ID);
+        order.setProductId("p1");
+        order.setQuantity(2);
+        order.setStatus(OrderStatus.CREATED);
+
+        when(repository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(repository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        com.ecommerce.shared.dto.order.UpdateOrderRequest request = new com.ecommerce.shared.dto.order.UpdateOrderRequest();
+        request.setProductId("new-p");
+        request.setQuantity(10);
+
+        Optional<Order> updated = orderService.updateOrder(
+                ORDER_ID,
+                request,
+                customerAuthentication());
+
+        assertTrue(updated.isPresent());
+        assertEquals("new-p", updated.get().getProductId());
+        assertEquals(10, updated.get().getQuantity());
+
+        verify(repository).save(order);
+        verify(kafkaProducer).sendOrderUpdatedEvent(
+                any(OrderUpdatedEvent.class));
+    }
+
+    @Test
+    void updateOrderShouldRejectAnotherUsersOrder() {
+        Order order = new Order();
+        order.setId(ORDER_ID);
+        order.setUserId("another-user");
+        order.setProductId("p1");
+        order.setQuantity(2);
+        order.setStatus(OrderStatus.CREATED);
+
+        when(repository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+
+        com.ecommerce.shared.dto.order.UpdateOrderRequest request = new com.ecommerce.shared.dto.order.UpdateOrderRequest();
+        request.setQuantity(5);
+
+        assertThrows(
+                NotAuthorizedException.class,
+                () -> orderService.updateOrder(
+                        ORDER_ID,
+                        request,
+                        customerAuthentication()));
+
+        verify(repository, never()).save(any(Order.class));
+        verifyNoInteractions(kafkaProducer);
+    }
+
+    @Test
+    void updateOrderShouldThrowWhenRequestIsNull() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.updateOrder(
+                        ORDER_ID,
+                        null,
+                        customerAuthentication()));
+
+        verifyNoInteractions(repository, kafkaProducer);
     }
 
     @Test
     void updateOrderShouldThrowWhenOrderNotFound() {
+        when(repository.findById(ORDER_ID)).thenReturn(Optional.empty());
 
-        UpdateOrderRequest request = new UpdateOrderRequest();
+        com.ecommerce.shared.dto.order.UpdateOrderRequest request = new com.ecommerce.shared.dto.order.UpdateOrderRequest();
         request.setProductId("new-p");
         request.setQuantity(10);
 
-        OrderNotFoundException ex = assertThrows(
+        assertThrows(
                 OrderNotFoundException.class,
-                () -> orderService.updateOrder("order-1", request));
+                () -> orderService.updateOrder(
+                        ORDER_ID,
+                        request,
+                        customerAuthentication()));
 
-        assertEquals("Order not found", ex.getMessage());
-        verify(repository).findById("order-1");
+        verify(repository, never()).save(any(Order.class));
+        verifyNoInteractions(kafkaProducer);
     }
 }

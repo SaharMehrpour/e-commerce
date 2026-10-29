@@ -1,84 +1,189 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { getOrders } from "../../api/orders";
+import { AuthContext } from "../../auth/AuthContext";
 import OrdersPage from "./OrdersPage";
-import { resetOrdersPageCache } from "./ordersPageCache";
-import { firstOrder, secondOrder } from "../../test/testOrders";
+import {
+  getOrdersPageCache,
+  resetOrdersPageCache,
+} from "./ordersPageCache";
 
 vi.mock("../../api/orders", () => ({
   getOrders: vi.fn(),
 }));
 
+const mockKeycloak = {
+  token: "mock-token",
+  authenticated: true,
+  tokenParsed: { sub: "test-user-1" },
+  updateToken: vi.fn().mockResolvedValue(false),
+};
+
+const firstOrder = {
+  id: "order-1",
+  userId: "test-user-1",
+  productId: "product-1",
+  quantity: 2,
+  status: "CREATED",
+};
+
+const secondOrder = {
+  id: "order-2",
+  userId: "test-user-1",
+  productId: "product-2",
+  quantity: 3,
+  status: "CREATED",
+};
+
+const cancelledOrder = {
+  id: "order-3",
+  userId: "test-user-1",
+  productId: "product-3",
+  quantity: 1,
+  status: "CANCELLED",
+};
+
+function renderOrdersPage() {
+  return render(
+    <AuthContext.Provider
+      value={{
+        keycloak: mockKeycloak,
+        authenticated: true,
+      }}
+    >
+      <OrdersPage />
+    </AuthContext.Provider>
+  );
+}
+
 describe("OrdersPage", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     resetOrdersPageCache();
+    mockKeycloak.updateToken.mockResolvedValue(false);
   });
 
   it("does not call the API until Load Orders is clicked", () => {
-    render(<OrdersPage />);
+    renderOrdersPage();
 
     expect(getOrders).not.toHaveBeenCalled();
-    expect(screen.getByText(/click load orders/i)).toBeInTheDocument();
+
+    expect(
+      screen.getByText(/click load orders to fetch orders from the api/i)
+    ).toBeInTheDocument();
   });
 
   it("loads orders when clicked and keeps the latest loaded orders after remount", async () => {
     const user = userEvent.setup();
+
     getOrders.mockResolvedValueOnce([firstOrder]);
 
-    const { unmount } = render(<OrdersPage />);
+    const { unmount } = renderOrdersPage();
 
-    await user.click(screen.getByRole("button", { name: /load orders/i }));
+    await user.click(
+      screen.getByRole("button", { name: /load orders/i })
+    );
 
-    expect(await screen.findByText(/order-1/i)).toBeInTheDocument();
+    expect(await screen.findByText(firstOrder.id)).toBeInTheDocument();
 
-    expect(screen.getByRole("button", { name: /refresh/i })).toBeInTheDocument();
+    expect(getOrders).toHaveBeenCalledWith(mockKeycloak);
+    expect(mockKeycloak.updateToken).toHaveBeenCalledWith(30);
+
+    await waitFor(() => {
+      expect(getOrdersPageCache("test-user-1").orders).toEqual([
+        firstOrder,
+      ]);
+    });
 
     unmount();
-    render(<OrdersPage />);
 
-    expect(screen.getByText(/order-1/i)).toBeInTheDocument();
+    renderOrdersPage();
+
+    expect(screen.getByText(firstOrder.id)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /refresh/i })
+    ).toBeInTheDocument();
+
+    // Cached data is displayed without making another API request.
     expect(getOrders).toHaveBeenCalledTimes(1);
   });
 
   it("updates cached orders when Refresh is clicked", async () => {
     const user = userEvent.setup();
-    getOrders.mockResolvedValueOnce([firstOrder]).mockResolvedValueOnce([secondOrder]);
 
-    render(<OrdersPage />);
+    getOrders
+      .mockResolvedValueOnce([firstOrder])
+      .mockResolvedValueOnce([secondOrder]);
 
-    await user.click(screen.getByRole("button", { name: /load orders/i }));
+    const { unmount } = renderOrdersPage();
 
-    expect(await screen.findByText(/order-1/i)).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /load orders/i })
+    );
 
-    await user.click(screen.getByRole("button", { name: /refresh/i }));
+    expect(await screen.findByText(firstOrder.id)).toBeInTheDocument();
 
-    expect(await screen.findByText(/order-2/i)).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /refresh/i })
+    );
 
-    expect(screen.queryByText(/order-1/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(secondOrder.id)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(firstOrder.id)
+      ).not.toBeInTheDocument();
+
+      expect(getOrdersPageCache("test-user-1").orders).toEqual([
+        secondOrder,
+      ]);
+    });
+
+    unmount();
+
+    renderOrdersPage();
+
+    expect(screen.getByText(secondOrder.id)).toBeInTheDocument();
+    expect(
+      screen.queryByText(firstOrder.id)
+    ).not.toBeInTheDocument();
+
+    expect(getOrders).toHaveBeenCalledTimes(2);
   });
 
   it("shows loading spinner while fetching orders and stops after loading", async () => {
     const user = userEvent.setup();
 
-    let resolvePromise;
+    let resolveOrders;
+
     getOrders.mockReturnValue(
       new Promise((resolve) => {
-        resolvePromise = resolve;
-      }),
+        resolveOrders = resolve;
+      })
     );
 
-    render(<OrdersPage />);
+    renderOrdersPage();
 
     await user.click(
-      screen.getByRole("button", { name: /load orders|Refresh/i }),
+      screen.getByRole("button", { name: /load orders/i })
     );
 
-    expect(screen.getByRole("status", { name: /loading orders/i })).toBeInTheDocument();
-    resolvePromise([]);
+    expect(
+      screen.getByRole("status", { name: /loading orders/i })
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      resolveOrders([firstOrder]);
+    });
+
+    expect(await screen.findByText(firstOrder.id)).toBeInTheDocument();
+
     await waitFor(() => {
-      expect(screen.queryByRole("status", { name: /loading orders/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("status", { name: /loading orders/i })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -87,69 +192,81 @@ describe("OrdersPage", () => {
 
     getOrders.mockRejectedValueOnce(new Error("API failed"));
 
-    render(<OrdersPage />);
+    renderOrdersPage();
 
-    await user.click(screen.getByRole("button", { name: /load orders|Refresh/i }));
+    await user.click(
+      screen.getByRole("button", { name: /load orders/i })
+    );
 
-    expect(
-      await screen.findByText(/API failed/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("API failed")).toBeInTheDocument();
 
-    expect(screen.queryByText(/loading orders/i)).not.toBeInTheDocument();
+    expect(getOrders).toHaveBeenCalledWith(mockKeycloak);
   });
 
   it("disables the button while loading orders", async () => {
     const user = userEvent.setup();
 
-    let resolvePromise;
+    let resolveOrders;
 
     getOrders.mockReturnValue(
       new Promise((resolve) => {
-        resolvePromise = resolve;
-      }),
+        resolveOrders = resolve;
+      })
     );
 
-    render(<OrdersPage />);
+    renderOrdersPage();
 
-    const button = screen.getByRole("button", { name: /load orders/i });
+    const loadButton = screen.getByRole("button", {
+      name: /load orders/i,
+    });
 
-    await user.click(button);
+    await user.click(loadButton);
 
-    expect(button).toBeDisabled();
+    expect(loadButton).toBeDisabled();
 
-    resolvePromise([]);
+    await act(async () => {
+      resolveOrders([firstOrder]);
+    });
+
+    await screen.findByText(firstOrder.id);
 
     await waitFor(() => {
-      expect(button).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /refresh/i })
+      ).toBeEnabled();
     });
   });
 
   it("copies the order id to clipboard", async () => {
     const user = userEvent.setup();
 
-    getOrders.mockResolvedValueOnce([firstOrder]);
+    const writeText = vi.fn().mockResolvedValue(undefined);
 
-    const writeTextMock = vi.fn();
     Object.defineProperty(navigator, "clipboard", {
-      value: {
-        writeText: writeTextMock,
-      },
-      writable: true,
+      configurable: true,
+      value: { writeText },
     });
 
-    render(<OrdersPage />);
+    getOrders.mockResolvedValueOnce([firstOrder]);
+
+    renderOrdersPage();
 
     await user.click(
-      screen.getByRole("button", { name: /load orders/i }),
+      screen.getByRole("button", { name: /load orders/i })
     );
 
-    expect(await screen.findByText(/order-1/i)).toBeInTheDocument();
+    const orderId = await screen.findByText(firstOrder.id);
+    const orderRow = orderId.closest("tr");
 
-    const copyButton = screen.getByRole("button", { name: "" });
+    expect(orderRow).not.toBeNull();
+
+    const copyButton = orderRow.querySelector("button");
+
+    expect(copyButton).not.toBeNull();
 
     await user.click(copyButton);
 
-    expect(writeTextMock).toHaveBeenCalledWith("order-1");
+    expect(writeText).toHaveBeenCalledWith(firstOrder.id);
   });
 
   it("shows the empty state when API returns no orders", async () => {
@@ -157,35 +274,37 @@ describe("OrdersPage", () => {
 
     getOrders.mockResolvedValueOnce([]);
 
-    render(<OrdersPage />);
+    renderOrdersPage();
 
     await user.click(
-      screen.getByRole("button", { name: /load orders/i }),
+      screen.getByRole("button", { name: /load orders/i })
     );
 
     expect(
-      await screen.findByRole("status", { name: /no orders yet/i }),
+      await screen.findByText("No orders yet.")
     ).toBeInTheDocument();
+
+    expect(getOrders).toHaveBeenCalledWith(mockKeycloak);
   });
 
   it("renders cancelled status styling correctly", async () => {
     const user = userEvent.setup();
 
-    const cancelledOrder = {
-      ...firstOrder,
-      status: "CANCELLED",
-    };
-
     getOrders.mockResolvedValueOnce([cancelledOrder]);
 
-    render(<OrdersPage />);
+    renderOrdersPage();
 
-    await user.click(screen.getByRole("button", { name: /load orders/i }));
+    await user.click(
+      screen.getByRole("button", { name: /load orders/i })
+    );
 
-    const badge = await screen.findByText(/cancelled/i);
+    expect(
+      await screen.findByText(cancelledOrder.id)
+    ).toBeInTheDocument();
 
-    expect(badge).toHaveClass("status-cancelled");
-    expect(badge).not.toHaveClass("status-created");
+    const status = screen.getByText("CANCELLED");
+
+    expect(status).toHaveClass("status-cancelled");
   });
 
 });

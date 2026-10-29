@@ -38,6 +38,8 @@ function App() {
 
   const userMenuRef = useRef(null);
 
+  const isAdmin = keycloak?.realmAccess?.roles?.includes("ADMIN");
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -50,10 +52,14 @@ function App() {
 
     document.addEventListener("mousedown", handleClickOutside);
 
+    if (activePage === "inventory" && (!authenticated || !isAdmin)) {
+      setActivePage("home");
+    }
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [activePage, authenticated, isAdmin]);
 
   const getUsername = () => {
     return (
@@ -145,18 +151,23 @@ function App() {
           className="page-tabs nav-pills"
           aria-label="Order pages"
         >
-          {Object.entries(pages).map(([pageId, page]) => (
-            <button
-              key={pageId}
-              type="button"
-              onClick={() => setActivePage(pageId)}
-              className={`nav-pill ${
-                activePage === pageId ? "active" : ""
-              }`}
-            >
-              {page.label}
-            </button>
-          ))}
+          {Object.entries(pages)
+            .filter(([pageId]) => {
+              if (pageId === "home") return true;
+              if (!authenticated) return false;
+              if (pageId === "inventory") return isAdmin;
+              return true;
+            })
+            .map(([pageId, page]) => (
+              <button
+                key={pageId}
+                type="button"
+                onClick={() => setActivePage(pageId)}
+                className={`nav-pill ${activePage === pageId ? "active" : ""}`}
+              >
+                {page.label}
+              </button>
+            ))}
         </nav>
       </header>
 

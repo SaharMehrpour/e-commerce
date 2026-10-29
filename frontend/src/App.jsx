@@ -5,7 +5,7 @@ import HomePage from "./pages/HomePage";
 import OrderDetailsPage from "./pages/order/OrderDetailsPage";
 import OrdersPage from "./pages/order/OrdersPage";
 import InventoryPage from "./pages/inventory/InventoryPage";
-import { AuthContext } from "./auth/AuthProvider";
+import { AuthContext } from "./auth/AuthContext";
 
 const pages = {
   home: {
@@ -40,6 +40,11 @@ function App() {
 
   const isAdmin = keycloak?.realmAccess?.roles?.includes("ADMIN");
 
+  const effectivePage =
+    activePage === "inventory" && (!authenticated || !isAdmin)
+      ? "home"
+      : activePage;
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -52,14 +57,10 @@ function App() {
 
     document.addEventListener("mousedown", handleClickOutside);
 
-    if (activePage === "inventory" && (!authenticated || !isAdmin)) {
-      setActivePage("home");
-    }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [activePage, authenticated, isAdmin]);
+  }, []);
 
   const getUsername = () => {
     return (
@@ -90,9 +91,7 @@ function App() {
                 <button
                   type="button"
                   className="user-menu-trigger"
-                  onClick={() =>
-                    setUserMenuOpen((open) => !open)
-                  }
+                  onClick={() => setUserMenuOpen((open) => !open)}
                   aria-expanded={userMenuOpen}
                   aria-haspopup="menu"
                 >
@@ -163,7 +162,8 @@ function App() {
                 key={pageId}
                 type="button"
                 onClick={() => setActivePage(pageId)}
-                className={`nav-pill ${activePage === pageId ? "active" : ""}`}
+                className={`nav-pill ${effectivePage === pageId ? "active" : ""
+                  }`}
               >
                 {page.label}
               </button>
@@ -175,7 +175,7 @@ function App() {
           PAGE CONTENT
       ========================= */}
       <section className="page-container">
-        {pages[activePage].component}
+        {pages[effectivePage].component}
       </section>
     </main>
   );

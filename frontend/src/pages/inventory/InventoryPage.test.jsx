@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthContext } from "../../auth/AuthProvider";
+import { AuthContext } from "../../auth/AuthContext";
 import { getInventory, updateStock } from "../../api/inventory";
 import InventoryPage from "./InventoryPage";
 import { resetInventoryPageCache } from "./inventoryPageCache";

@@ -1,7 +1,6 @@
-import { createContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { AuthContext } from "./AuthContext";
 import keycloak from "./keycloak";
-
-export const AuthContext = createContext(null);
 
 let keycloakInitialized = false;
 
@@ -21,8 +20,8 @@ export function AuthProvider({ children }) {
                 onLoad: "check-sso",
                 pkceMethod: "S256",
             })
-            .then((authenticated) => {
-                setAuthenticated(authenticated);
+            .then((isAuthenticated) => {
+                setAuthenticated(isAuthenticated);
                 setLoading(false);
             })
             .catch((error) => {

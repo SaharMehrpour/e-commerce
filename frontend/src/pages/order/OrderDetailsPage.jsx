@@ -4,7 +4,7 @@ import {
   getOrderById,
   updateOrder,
 } from "../../api/orders";
-import { AuthContext } from "../../auth/AuthProvider";
+import { AuthContext } from "../../auth/AuthContext";
 
 function OrderDetailsPage() {
   const { keycloak, authenticated } = useContext(AuthContext);

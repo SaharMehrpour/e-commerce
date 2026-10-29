@@ -12,7 +12,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.ecommerce.inventory.domain.InventoryItem;
-import com.ecommerce.inventory.idempotency.ProcessedEventRepository;
 import com.ecommerce.inventory.service.InventoryService;
 import com.ecommerce.shared.dto.inventory.InventoryRequest;
 
@@ -34,13 +33,11 @@ class InventoryControllerTest {
     @MockitoBean
     private InventoryService inventoryService;
 
-    @MockitoBean
-    private ProcessedEventRepository processedEventRepository;
-
     @Test
-    void addStockShouldUpdateInventory() throws Exception {
+    void updateStockShouldUpdateInventory() throws Exception {
         InventoryItem updatedItem = new InventoryItem("p1", 150, 0);
-        when(inventoryService.updateStock(any(InventoryRequest.class))).thenReturn(Optional.of(updatedItem));
+        when(inventoryService.updateStock(any(InventoryRequest.class)))
+                .thenReturn(Optional.of(updatedItem));
 
         String requestJson = """
                 {
@@ -49,7 +46,7 @@ class InventoryControllerTest {
                 }
                 """;
 
-        mockMvc.perform(patch("/inventory/add")
+        mockMvc.perform(patch("/inventory/update")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isOk())
@@ -59,25 +56,9 @@ class InventoryControllerTest {
     }
 
     @Test
-    void addStockShouldReturn404WhenInventoryItemNotFound() throws Exception {
-        when(inventoryService.updateStock(any(InventoryRequest.class))).thenReturn(Optional.empty());
-        String requestJson = """
-                {
-                    "productId": "p1",
-                    "quantity": 50
-                }
-                """;
-
-        mockMvc.perform(patch("/inventory/add")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestJson))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void reserveStockShouldUpdateInventory() throws Exception {
-        InventoryItem updatedItem = new InventoryItem("p1", 50, 50);
-        when(inventoryService.reserveStock(any(InventoryRequest.class))).thenReturn(Optional.of(updatedItem));
+    void updateStockShouldReturn404WhenInventoryItemNotFound() throws Exception {
+        when(inventoryService.updateStock(any(InventoryRequest.class)))
+                .thenReturn(Optional.empty());
 
         String requestJson = """
                 {
@@ -86,100 +67,7 @@ class InventoryControllerTest {
                 }
                 """;
 
-        mockMvc.perform(patch("/inventory/reserve")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestJson))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productId").value("p1"))
-                .andExpect(jsonPath("$.availableQuantity").value(50))
-                .andExpect(jsonPath("$.reservedQuantity").value(50));
-    }
-
-    @Test
-    void reserveStockShouldReturn404ForNonExistingItem() throws Exception {
-        when(inventoryService.reserveStock(any(InventoryRequest.class))).thenReturn(Optional.empty());
-        String requestJson = """
-                {
-                    "productId": "p1",
-                    "quantity": 50
-                }
-                """;
-
-        mockMvc.perform(patch("/inventory/reserve")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestJson))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void deductStockShouldUpdateInventory() throws Exception {
-        InventoryItem updatedItem = new InventoryItem("p1", 70, 50);
-        when(inventoryService.deductStock(any(InventoryRequest.class))).thenReturn(Optional.of(updatedItem));
-
-        String requestJson = """
-                {
-                    "productId": "p1",
-                    "quantity": 30
-                }
-                """;
-
-        mockMvc.perform(patch("/inventory/deduct")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestJson))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productId").value("p1"))
-                .andExpect(jsonPath("$.availableQuantity").value(70))
-                .andExpect(jsonPath("$.reservedQuantity").value(50));
-    }
-
-    @Test
-    void deductStockShouldReturn404ForNonExistingItem() throws Exception {
-        when(inventoryService.deductStock(any(InventoryRequest.class))).thenReturn(Optional.empty());
-        String requestJson = """
-                {
-                    "productId": "p1",
-                    "quantity": 30
-                }
-                """;
-
-        mockMvc.perform(patch("/inventory/deduct")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestJson))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void releaseStockShouldUpdateInventory() throws Exception {
-        InventoryItem updatedItem = new InventoryItem("p1", 130, 20);
-        when(inventoryService.releaseStock(any(InventoryRequest.class))).thenReturn(Optional.of(updatedItem));
-
-        String requestJson = """
-                {
-                    "productId": "p1",
-                    "quantity": 30
-                }
-                """;
-
-        mockMvc.perform(patch("/inventory/release")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestJson))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.productId").value("p1"))
-                .andExpect(jsonPath("$.availableQuantity").value(130))
-                .andExpect(jsonPath("$.reservedQuantity").value(20));
-    }
-
-    @Test
-    void releaseStockShouldReturn404ForNonExistingItem() throws Exception {
-        when(inventoryService.releaseStock(any(InventoryRequest.class))).thenReturn(Optional.empty());
-        String requestJson = """
-                {
-                    "productId": "p1",
-                    "quantity": 30
-                }
-                """;
-
-        mockMvc.perform(patch("/inventory/release")
+        mockMvc.perform(patch("/inventory/update")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
                 .andExpect(status().isNotFound());

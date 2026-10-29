@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
 import { getOrders } from "../../api/orders";
 import { getOrdersPageCache, setOrdersPageCache } from "./ordersPageCache";
-import { AuthContext } from "../../auth/AuthProvider";
+import { AuthContext } from "../../auth/AuthContext";
 
 function OrdersPage() {
   const { keycloak, authenticated } = useContext(AuthContext);
@@ -16,6 +16,7 @@ function OrdersPage() {
   async function loadOrders() {
     setError("");
     setIsLoading(true);
+    setHasLoaded(true);
 
     if (!authenticated) {
       setOrders([]);

@@ -76,7 +76,7 @@ public class InventoryServiceTest {
 
         InventoryRequest request = new InventoryRequest();
         request.setProductId("product-123");
-        request.setQuantity(10);
+        request.setQuantity(20);
         
         Optional<InventoryItem> result = inventoryService.updateStock(request);
 

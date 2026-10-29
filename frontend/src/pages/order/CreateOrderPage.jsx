@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { createOrder } from "../../api/orders";
-import { AuthContext } from "../../auth/AuthProvider";
+import { AuthContext } from "../../auth/AuthContext";
 
 const initialOrder = {
   productId: "",

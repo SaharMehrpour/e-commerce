@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
 import { getInventory, updateStock } from "../../api/inventory";
 import { getInventoryPageCache, setInventoryPageCache } from "./inventoryPageCache";
-import { AuthContext } from "../../auth/AuthProvider";
+import { AuthContext } from "../../auth/AuthContext";
 
 function InventoryPage() {
   const initialCache = getInventoryPageCache();

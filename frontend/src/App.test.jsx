@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { AuthContext } from "./auth/AuthProvider";
+import { AuthContext } from "./auth/AuthContext";
 import App from "./App";
 
 vi.mock("./api/orders", () => ({
